@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Car, CarStatus } from '@/models/Car';
+import { CarCard } from '@/components/ui/CarCard';
 
 export default function CatalogScreen() {
   const [cars, setCars] = useState<Car[]>([]);
@@ -192,6 +193,8 @@ export default function CatalogScreen() {
     switch (status) {
       case CarStatus.AVAILABLE:
         return '#00FFAA';
+      case CarStatus.RESERVED:
+        return '#FFCC00';
       case CarStatus.BUSY:
         return '#FF9500';
       case CarStatus.CHARGING:
@@ -209,6 +212,8 @@ export default function CatalogScreen() {
     switch (status) {
       case CarStatus.AVAILABLE:
         return 'Доступна';
+      case CarStatus.RESERVED:
+        return 'Зарезервирована';
       case CarStatus.BUSY:
         return 'Используется';
       case CarStatus.CHARGING:
@@ -226,6 +231,8 @@ export default function CatalogScreen() {
     switch (status) {
       case CarStatus.AVAILABLE:
         return 'checkmark-circle';
+      case CarStatus.RESERVED:
+        return 'timer';
       case CarStatus.BUSY:
         return 'hourglass';
       case CarStatus.CHARGING:
@@ -240,59 +247,7 @@ export default function CatalogScreen() {
   };
 
   const renderCarItem = ({ item }: { item: Car }) => (
-    <TouchableOpacity
-      style={styles.carCard}
-      onPress={() =>
-        router.push({
-          pathname: '/catalog/details',
-          params: { id: item.id },
-        })
-      }
-    >
-      <View style={styles.carHeader}>
-        <Text style={styles.carName}>{item.name}</Text>
-        <View
-          style={[
-            styles.statusBadge,
-            { backgroundColor: getStatusColor(item.status) + '20' },
-          ]}
-        >
-          <Ionicons
-            name={getStatusIcon(item.status)}
-            size={14}
-            color={getStatusColor(item.status)}
-          />
-          <Text
-            style={[styles.statusText, { color: getStatusColor(item.status) }]}
-          >
-            {getStatusText(item.status)}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.carImageContainer}>
-        <Image
-          source={{ uri: item.image }}
-          style={styles.carImage}
-          resizeMode="contain"
-        />
-      </View>
-
-      <View style={styles.carSpecs}>
-        <View style={styles.specItem}>
-          <Ionicons name="flash" size={16} color="#00FFAA" />
-          <Text style={styles.specText}>{item.batteryLevel}%</Text>
-        </View>
-        <View style={styles.specItem}>
-          <Ionicons name="speedometer" size={16} color="#00FFAA" />
-          <Text style={styles.specText}>{item.maxSpeed} км/ч</Text>
-        </View>
-        <View style={styles.specItem}>
-          <Ionicons name="pricetags" size={16} color="#00FFAA" />
-          <Text style={styles.specText}>{item.pricePerMinute} монет/мин</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
+    <CarCard car={item} onRefresh={fetchCars} />
   );
 
   return (

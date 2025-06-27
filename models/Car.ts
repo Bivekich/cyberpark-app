@@ -3,6 +3,7 @@ import { z } from 'zod';
 // Статусы машинки
 export enum CarStatus {
   AVAILABLE = 'available', // доступна для бронирования
+  RESERVED = 'reserved', // зарезервирована (до 10 минут)
   BUSY = 'busy', // занята другим пользователем
   CHARGING = 'charging', // на зарядке
   MAINTENANCE = 'maintenance', // на техническом обслуживании

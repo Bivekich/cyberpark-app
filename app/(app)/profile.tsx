@@ -29,11 +29,11 @@ export default function ProfileScreen() {
   const fetchBalance = async () => {
     try {
       setIsLoading(true);
-      // Здесь должен быть вызов реального API
-      // Заглушка для демонстрации
-      setBalance(500);
+      const userBalance = await transactionsService.getUserBalance();
+      setBalance(userBalance);
+      console.log('Profile: Balance fetched:', userBalance);
     } catch (error) {
-      console.error('Error fetching balance:', error);
+      console.error('Profile: Error fetching balance:', error);
     } finally {
       setIsLoading(false);
     }
@@ -148,6 +148,20 @@ export default function ProfileScreen() {
             >
               <Ionicons name="cash-outline" size={24} color="#FFFFFF" />
               <Text style={styles.menuText}>История транзакций</Text>
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color="#9F9FAC"
+                style={styles.menuArrow}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push('/profile/payment-history')}
+            >
+              <Ionicons name="card-outline" size={24} color="#FFFFFF" />
+              <Text style={styles.menuText}>История платежей</Text>
               <Ionicons
                 name="chevron-forward"
                 size={20}

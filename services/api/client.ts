@@ -2,10 +2,10 @@ import * as SecureStore from 'expo-secure-store';
 
 // Базовый URL API
 // Используйте свой локальный IP адрес вместо localhost для тестирования на физическом устройстве
-const API_URL = 'http://192.168.0.27:3000'; // Замените на IP вашего компьютера в локальной сети
+// const API_URL = 'http://192.168.0.234:3000'; // Замените на IP вашего компьютера в локальной сети
 // const API_URL = 'http://62.118.109.7:3000'; // URL вашего сервера
 // const API_URL = 'http://10.0.2.2:3000'; // Для эмулятора Android
-// const API_URL = 'http://localhost:3000'; // Для iOS симулятора
+const API_URL = 'http://localhost:3000'; // Для iOS симулятора
 
 interface ApiResponse<T = any> {
   data?: T;
@@ -41,7 +41,7 @@ export class ApiClient {
 
       // Добавляем токен авторизации, если требуется
       if (isAuth) {
-        const token = await SecureStore.getItemAsync('accessToken');
+        const token = await SecureStore.getItemAsync('token');
         if (token) {
           headers['Authorization'] = `Bearer ${token}`;
         }
@@ -99,7 +99,7 @@ export class ApiClient {
       const { accessToken, refreshToken: newRefreshToken } =
         await response.json();
 
-      await SecureStore.setItemAsync('accessToken', accessToken);
+      await SecureStore.setItemAsync('token', accessToken);
       await SecureStore.setItemAsync('refreshToken', newRefreshToken);
 
       return true;
@@ -113,7 +113,69 @@ export class ApiClient {
    * Очищает токены авторизации
    */
   static async clearTokens(): Promise<void> {
-    await SecureStore.deleteItemAsync('accessToken');
+    await SecureStore.deleteItemAsync('token');
     await SecureStore.deleteItemAsync('refreshToken');
   }
 }
+
+// Создаем axios-like интерфейс для удобства использования
+export const client = {
+  async get<T = any>(url: string, config?: { headers?: Record<string, string>; params?: any }): Promise<{ data: T }> {
+    const params = config?.params ? '?' + new URLSearchParams(config.params).toString() : '';
+    const response = await ApiClient.request<T>(url + params, {
+      method: 'GET',
+      headers: config?.headers,
+      isAuth: !!config?.headers?.Authorization,
+    });
+    
+    if (response.error) {
+      throw new Error(response.error);
+    }
+    
+    return { data: response.data! };
+  },
+
+  async post<T = any>(url: string, data?: any, config?: { headers?: Record<string, string> }): Promise<{ data: T }> {
+    const response = await ApiClient.request<T>(url, {
+      method: 'POST',
+      body: data,
+      headers: config?.headers,
+      isAuth: !!config?.headers?.Authorization,
+    });
+    
+    if (response.error) {
+      throw new Error(response.error);
+    }
+    
+    return { data: response.data! };
+  },
+
+  async put<T = any>(url: string, data?: any, config?: { headers?: Record<string, string> }): Promise<{ data: T }> {
+    const response = await ApiClient.request<T>(url, {
+      method: 'PUT',
+      body: data,
+      headers: config?.headers,
+      isAuth: !!config?.headers?.Authorization,
+    });
+    
+    if (response.error) {
+      throw new Error(response.error);
+    }
+    
+    return { data: response.data! };
+  },
+
+  async delete<T = any>(url: string, config?: { headers?: Record<string, string> }): Promise<{ data: T }> {
+    const response = await ApiClient.request<T>(url, {
+      method: 'DELETE',
+      headers: config?.headers,
+      isAuth: !!config?.headers?.Authorization,
+    });
+    
+    if (response.error) {
+      throw new Error(response.error);
+    }
+    
+    return { data: response.data! };
+  }
+};

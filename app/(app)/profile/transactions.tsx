@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { paymentsService } from '@/services/api/payments';
 
 // Типы для транзакций
 export enum TransactionType {

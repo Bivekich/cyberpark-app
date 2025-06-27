@@ -53,4 +53,14 @@ export const API_ENDPOINTS = {
     READ: (id: string) => `/notifications/${id}/read`,
     READ_ALL: '/notifications/read-all',
   },
+
+  // Резервации
+  RESERVATIONS: {
+    LIST: '/reservations',
+    CREATE: '/reservations',
+    ACTIVE: '/reservations/active',
+    CANCEL: (id: string) => `/reservations/${id}/cancel`,
+    USE: (id: string) => `/reservations/${id}/use`,
+    DETAILS: (id: string) => `/reservations/${id}`,
+  },
 };

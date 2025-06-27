@@ -15,10 +15,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Car, CarStatus } from '@/models/Car';
+import { useReservation } from '@/contexts/ReservationContext';
+import { ReservationTimer } from '@/components/ui/ReservationTimer';
 
 export default function CarDetailsScreen() {
   const params = useLocalSearchParams();
   const carId = params.id as string;
+  const useReservationParam = params.useReservation as string;
+  const { activeReservation, useReservation: useReservationAction, createReservation, cancelReservation } = useReservation();
 
   const [car, setCar] = useState<Car | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -74,6 +78,8 @@ export default function CarDetailsScreen() {
     switch (status) {
       case CarStatus.AVAILABLE:
         return 'Доступна';
+      case CarStatus.RESERVED:
+        return 'Зарезервирована';
       case CarStatus.BUSY:
         return 'Занята';
       case CarStatus.CHARGING:
@@ -91,10 +97,12 @@ export default function CarDetailsScreen() {
     switch (status) {
       case CarStatus.AVAILABLE:
         return '#00FFAA';
+      case CarStatus.RESERVED:
+        return '#FFCC00';
       case CarStatus.BUSY:
         return '#FF9500';
       case CarStatus.CHARGING:
-        return '#FFCC00';
+        return '#00C8FF';
       case CarStatus.MAINTENANCE:
         return '#FF3B30';
       case CarStatus.OFFLINE:

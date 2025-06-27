@@ -56,6 +56,7 @@ export function SocialButton({ type, style, ...rest }: SocialButtonProps) {
 const styles = StyleSheet.create({
   button: {
     height: 50,
+    width: '100%',
     borderRadius: 8,
     backgroundColor: '#272734',
     justifyContent: 'center',

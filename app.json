@@ -4,6 +4,7 @@
     "slug": "cyberpark",
     "version": "1.0.0",
     "orientation": "portrait",
+    "sdkVersion": "53.0.0",
     "icon": "./assets/images/icon.png",
     "scheme": "cyberpark",
     "userInterfaceStyle": "automatic",

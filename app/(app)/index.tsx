@@ -14,21 +14,36 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
+import { useReservation } from '@/contexts/ReservationContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Car, CarStatus } from '@/models/Car';
+import { balanceService } from '@/services/api/balance';
+import { ReservationTimer } from '@/components/ui/ReservationTimer';
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const { activeReservation, refreshActiveReservation } = useReservation();
   const [recentCars, setRecentCars] = useState<Car[]>([]);
   const [nearbyAvailable, setNearbyAvailable] = useState<Car[]>([]);
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showCarSelector, setShowCarSelector] = useState(false);
+  const [balance, setBalance] = useState<number>(0);
 
   useEffect(() => {
     fetchCarsData();
+    fetchBalance();
   }, []);
+
+  const fetchBalance = async () => {
+    try {
+      const userBalance = await balanceService.getUserBalance();
+      setBalance(userBalance);
+    } catch (error) {
+      console.error('Error fetching balance:', error);
+    }
+  };
 
   const fetchCarsData = async () => {
     try {
@@ -206,7 +221,7 @@ export default function HomeScreen() {
           <View style={styles.balanceCard}>
             <View>
               <Text style={styles.balanceLabel}>Ваш баланс</Text>
-              <Text style={styles.balanceValue}>500 монет</Text>
+              <Text style={styles.balanceValue}>{balance.toFixed(0)} ₽</Text>
             </View>
             <TouchableOpacity
               style={styles.topUpButton}
@@ -283,6 +298,36 @@ export default function HomeScreen() {
                   </TouchableOpacity>
                 ))}
               </ScrollView>
+
+              {/* Секция активной резервации */}
+              {activeReservation && (
+                <View style={styles.reservationSection}>
+                  <View style={styles.reservationHeader}>
+                    <Text style={styles.reservationTitle}>Активная резервация</Text>
+                    <ReservationTimer
+                      reservation={activeReservation}
+                      onExpired={refreshActiveReservation}
+                    />
+                  </View>
+                  <View style={styles.reservationCard}>
+                    <Text style={styles.reservationCarName}>
+                      Зарезервированная машина
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.useReservationButton}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/catalog/details',
+                          params: { id: activeReservation.carId, useReservation: 'true' },
+                        })
+                      }
+                    >
+                      <Ionicons name="car" size={20} color="#FFFFFF" />
+                      <Text style={styles.useReservationText}>Использовать резервацию</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
 
               <View style={styles.quickStartSection}>
                 <View style={styles.quickStartHeader}>
@@ -753,5 +798,50 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#121220',
+  },
+  reservationSection: {
+    backgroundColor: 'rgba(255, 204, 0, 0.1)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 204, 0, 0.3)',
+  },
+  reservationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  reservationTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFCC00',
+  },
+  reservationCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 12,
+  },
+  reservationCarName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  useReservationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#00FFAA',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  useReservationText: {
+    color: '#121220',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
   },
 });

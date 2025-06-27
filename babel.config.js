@@ -3,7 +3,6 @@ module.exports = function (api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      // Другие плагины
       [
         'module-resolver',
         {
@@ -13,6 +12,7 @@ module.exports = function (api) {
           extensions: ['.js', '.jsx', '.ts', '.tsx'],
         },
       ],
+      'react-native-reanimated/plugin', // Must be last!
     ],
   };
 };

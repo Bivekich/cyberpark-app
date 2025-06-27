@@ -170,7 +170,7 @@ export class AuthService {
    * Сохранение токенов авторизации
    */
   private static async saveTokens(tokens: AuthResponse): Promise<void> {
-    await SecureStore.setItemAsync('accessToken', tokens.accessToken);
+    await SecureStore.setItemAsync('token', tokens.accessToken);
     await SecureStore.setItemAsync('refreshToken', tokens.refreshToken);
   }
 

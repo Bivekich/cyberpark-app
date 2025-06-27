@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,33 +9,101 @@ import {
   Alert,
   TextInput,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { paymentsService, PaymentMethod } from '@/services/api/payments';
 
-type PaymentMethod = 'card' | 'transfer' | 'cash';
+type LocalPaymentMethod = 'card' | 'transfer' | 'cash';
 
 export default function DepositScreen() {
   const [amount, setAmount] = useState('500');
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('card');
+  const [selectedMethod, setSelectedMethod] = useState<LocalPaymentMethod>('card');
   const [isLoading, setIsLoading] = useState(false);
+  const [availableMethods, setAvailableMethods] = useState<PaymentMethod[]>([]);
 
-  const handleDeposit = () => {
+  useEffect(() => {
+    loadPaymentMethods();
+  }, []);
+
+  const handleGoBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(app)/profile');
+    }
+  };
+
+  const loadPaymentMethods = async () => {
+    try {
+      const methods = await paymentsService.getPaymentMethods();
+      setAvailableMethods(methods);
+    } catch (error) {
+      console.error('Error loading payment methods:', error);
+    }
+  };
+
+  const handleDeposit = async () => {
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
       Alert.alert('Ошибка', 'Введите корректную сумму');
       return;
     }
 
+    if (Number(amount) < 100) {
+      Alert.alert('Ошибка', 'Минимальная сумма пополнения 100 рублей');
+      return;
+    }
+
     setIsLoading(true);
 
-    // Имитация запроса к серверу
-    setTimeout(() => {
+    try {
+      // Определяем тип платежа на основе выбранного метода
+      let paymentType = 'bank_card';
+      if (selectedMethod === 'transfer') {
+        paymentType = 'sberbank'; // СБП через Сбербанк
+      } else if (selectedMethod === 'cash') {
+        Alert.alert('Информация', 'Пополнение наличными доступно только в парке');
+        setIsLoading(false);
+        return;
+      }
+
+      // Создаем платеж через YooKassa
+      const payment = await paymentsService.createTopupPayment(
+        Number(amount),
+        paymentType,
+        'cyberpark://payment/success'
+      );
+
       setIsLoading(false);
-      Alert.alert('Успешно!', `Баланс пополнен на ${amount} монет`, [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
-    }, 1500);
+
+      if (payment.confirmation?.confirmation_url) {
+        // Открываем страницу оплаты
+        const supported = await Linking.canOpenURL(payment.confirmation.confirmation_url);
+        
+        if (supported) {
+          await Linking.openURL(payment.confirmation.confirmation_url);
+          
+          // Показываем информацию о переходе к оплате
+          Alert.alert(
+            'Переход к оплате',
+            'Вы будете перенаправлены на страницу оплаты. После успешной оплаты вернитесь в приложение.',
+            [
+              { text: 'OK', onPress: handleGoBack }
+            ]
+          );
+        } else {
+          Alert.alert('Ошибка', 'Не удалось открыть страницу оплаты');
+        }
+      } else {
+        Alert.alert('Ошибка', 'Не удалось получить ссылку для оплаты');
+      }
+    } catch (error) {
+      setIsLoading(false);
+      console.error('Payment error:', error);
+      Alert.alert('Ошибка', 'Не удалось создать платеж. Попробуйте позже.');
+    }
   };
 
   const renderPaymentMethods = () => {
@@ -119,7 +187,7 @@ export default function DepositScreen() {
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={handleGoBack}
           >
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
