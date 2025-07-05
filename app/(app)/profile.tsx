@@ -14,17 +14,29 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { transactionsService } from '@/services/api';
+import { transactionsService, usersApi } from '@/services/api';
 import { User } from '@/models/User';
+import * as ImagePicker from 'expo-image-picker';
+import * as SecureStore from 'expo-secure-store';
+import { getProfileImageUrl } from '@/utils/imageUtils';
 
 export default function ProfileScreen() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, updateUser } = useAuth();
   const [balance, setBalance] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(user?.profileImage);
 
   useEffect(() => {
     fetchBalance();
   }, []);
+
+  useEffect(() => {
+    // Update avatar when user changes
+    console.log('User changed in profile screen, user.profileImage:', user?.profileImage);
+    const processedUrl = getProfileImageUrl(user?.profileImage);
+    console.log('Processed avatar URL:', processedUrl);
+    setAvatarUrl(processedUrl || undefined);
+  }, [user]);
 
   const fetchBalance = async () => {
     try {
@@ -77,6 +89,52 @@ export default function ProfileScreen() {
     router.push('/profile/support');
   };
 
+  const pickAvatar = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Доступ запрещен', 'Разрешите доступ к фотобиблиотеке');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets?.length) return;
+
+      const asset = result.assets[0];
+      const contentType = asset.mimeType || 'image/jpeg';
+
+      // 1. Получаем presigned URL
+      const { uploadUrl, publicUrl } = await usersApi.getAvatarUploadUrl(contentType);
+
+      // 2. Загружаем файл
+      const blob = await fetch(asset.uri).then(res => res.blob());
+      await fetch(uploadUrl, { method: 'PUT', body: blob, headers: { 'Content-Type': contentType } });
+
+      // 3. Сохраняем URL в профиле
+      console.log('About to save avatar URL to backend:', publicUrl);
+      await usersApi.saveAvatar(publicUrl);
+      console.log('Avatar URL saved to backend successfully');
+
+      // 4. Обновляем локальное состояние и пользователя в контексте
+      console.log('Avatar upload successful, publicUrl:', publicUrl);
+      setAvatarUrl(publicUrl);
+      
+      // Refresh user data to get updated profile
+      console.log('About to refresh user data...');
+      await updateUser();
+      console.log('User data refreshed successfully');
+
+      Alert.alert('Успешно', 'Аватар обновлен');
+    } catch (error) {
+      console.error('Avatar upload error', error);
+      Alert.alert('Ошибка', 'Не удалось обновить аватар');
+    }
+  };
+
   return (
     <LinearGradient colors={['#121220', '#1A1A2E']} style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -91,9 +149,20 @@ export default function ProfileScreen() {
           <View style={styles.profileHeader}>
             <View style={styles.avatarContainer}>
               <View style={styles.avatar}>
-                <Ionicons name="person-outline" size={40} color="#FFF" />
+                {avatarUrl ? (
+                  <Image 
+                    source={{ uri: avatarUrl }} 
+                    style={styles.avatarImage}
+                    onError={() => {
+                      console.warn('Avatar failed to load:', avatarUrl);
+                      setAvatarUrl(undefined);
+                    }}
+                  />
+                ) : (
+                  <Ionicons name="person-outline" size={40} color="#FFF" />
+                )}
               </View>
-              <TouchableOpacity style={styles.editAvatarButton}>
+              <TouchableOpacity style={styles.editAvatarButton} onPress={pickAvatar}>
                 <Ionicons name="camera-outline" size={18} color="#FFF" />
               </TouchableOpacity>
             </View>
@@ -346,5 +415,10 @@ const styles = StyleSheet.create({
     color: '#9F9FAC',
     textAlign: 'center',
     marginBottom: 20,
+  },
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
 });

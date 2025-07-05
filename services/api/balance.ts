@@ -7,12 +7,8 @@ class BalanceService {
    */
   async getUserBalance(): Promise<number> {
     try {
-      const token = await SecureStore.getItemAsync('token');
-      console.log('Balance Service: Token found:', !!token);
-
-      const response = await client.get('/payments/balance', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      console.log('Balance Service: Fetching balance...');
+      const response = await client.get('/payments/balance');
 
       console.log('Balance Service: Response received:', response.data);
       return response.data.balance || 0;

@@ -27,9 +27,9 @@ export default function PaymentHistoryScreen() {
 
   const loadPaymentHistory = async () => {
     try {
-      // Temporary: skip payment history loading to avoid YooKassa errors
-      console.log('Skipping payment history loading for now');
-      setPayments([]);
+      setLoading(true);
+      const history = await paymentsService.getPaymentHistory({ limit: 100 });
+      setPayments(history.items);
     } catch (error) {
       console.error('Error loading payment history:', error);
       Alert.alert('Ошибка', 'Не удалось загрузить историю платежей');
@@ -51,6 +51,8 @@ export default function PaymentHistoryScreen() {
       case 'pending':
       case 'waiting_for_capture':
         return '#FF9500';
+      case 'failed':
+        return '#FF3B30';
       case 'canceled':
         return '#FF3B30';
       default:
@@ -66,6 +68,8 @@ export default function PaymentHistoryScreen() {
         return 'В обработке';
       case 'waiting_for_capture':
         return 'Ожидает подтверждения';
+      case 'failed':
+        return 'Ошибка';
       case 'canceled':
         return 'Отменен';
       default:
@@ -80,6 +84,8 @@ export default function PaymentHistoryScreen() {
       case 'pending':
       case 'waiting_for_capture':
         return 'hourglass';
+      case 'failed':
+        return 'close-circle';
       case 'canceled':
         return 'close-circle';
       default:

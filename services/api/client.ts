@@ -138,10 +138,12 @@ export class ApiClient {
 export const client = {
   async get<T = any>(url: string, config?: { headers?: Record<string, string>; params?: any }): Promise<{ data: T }> {
     const params = config?.params ? '?' + new URLSearchParams(config.params).toString() : '';
+    // Auto-detect if this endpoint needs authentication
+    const needsAuth = url.startsWith('/auth/profile') || url.startsWith('/users') || url.startsWith('/payments') || !!config?.headers?.Authorization;
     const response = await ApiClient.request<T>(url + params, {
       method: 'GET',
       headers: config?.headers,
-      isAuth: !!config?.headers?.Authorization,
+      isAuth: needsAuth,
     });
     
     if (response.error) {
@@ -152,11 +154,12 @@ export const client = {
   },
 
   async post<T = any>(url: string, data?: any, config?: { headers?: Record<string, string> }): Promise<{ data: T }> {
+    const needsAuth = url.startsWith('/auth/profile') || url.startsWith('/users') || url.startsWith('/payments') || !!config?.headers?.Authorization;
     const response = await ApiClient.request<T>(url, {
       method: 'POST',
       body: data,
       headers: config?.headers,
-      isAuth: !!config?.headers?.Authorization,
+      isAuth: needsAuth,
     });
     
     if (response.error) {

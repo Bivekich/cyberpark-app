@@ -9,6 +9,7 @@ import * as SecureStore from 'expo-secure-store';
 import { router } from 'expo-router';
 import { Alert } from 'react-native';
 import { AuthService } from '@/services/api/auth';
+import { client } from '@/services/api/client';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -16,6 +17,7 @@ interface User {
   id: string;
   email?: string;
   fullName?: string;
+  profileImage?: string;
 }
 
 interface AuthContextType {
@@ -28,6 +30,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
   signInWithTelegram: () => Promise<void>;
+  updateUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -42,9 +45,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function loadUserFromStorage() {
     try {
+      const token = await SecureStore.getItemAsync('token');
+      if (token) {
+        // Try to fetch fresh user data from API
+        try {
+          const response = await client.get('/auth/profile');
+          if (response.data) {
+            console.log('Fresh user data from API:', response.data);
+            setUser(response.data);
+            await SecureStore.setItemAsync('user', JSON.stringify(response.data));
+            console.log('User data stored in SecureStore');
+            return;
+          }
+        } catch (apiError) {
+          // Silently fall back to stored user data if API call fails
+          // This is normal when token is expired or network is unavailable
+          console.log('Using stored user data, API call failed');
+        }
+      }
+      
+      // Fallback to stored user data
       const userJson = await SecureStore.getItemAsync('user');
       if (userJson) {
-        setUser(JSON.parse(userJson));
+        const storedUser = JSON.parse(userJson);
+        console.log('Loaded stored user data:', storedUser);
+        setUser(storedUser);
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -235,6 +260,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function updateUser() {
+    try {
+      // Try to get fresh user data from API with automatic auth handling
+      const response = await client.get('/auth/profile');
+      if (response.data) {
+        console.log('Fresh user data from updateUser:', response.data);
+        setUser(response.data);
+        await SecureStore.setItemAsync('user', JSON.stringify(response.data));
+      }
+    } catch (error) {
+      console.log('Failed to refresh user data in updateUser, falling back to stored data');
+      // Fall back to loading from storage
+      await loadUserFromStorage();
+    }
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -247,6 +288,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithGoogle,
         signInWithApple,
         signInWithTelegram,
+        updateUser,
       }}
     >
       {children}

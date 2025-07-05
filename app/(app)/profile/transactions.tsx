@@ -14,104 +14,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router, Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { paymentsService } from '@/services/api/payments';
-
-// Типы для транзакций
-export enum TransactionType {
-  DEPOSIT = 'DEPOSIT',
-  WITHDRAW = 'WITHDRAW',
-  RIDE_PAYMENT = 'RIDE_PAYMENT',
-  REFUND = 'REFUND',
-  BONUS = 'BONUS',
-  PENALTY = 'PENALTY',
-}
-
-export enum TransactionStatus {
-  PENDING = 'PENDING',
-  COMPLETED = 'COMPLETED',
-  FAILED = 'FAILED',
-}
-
-interface Transaction {
-  id: string;
-  userId: string;
-  amount: number;
-  type: TransactionType;
-  status: TransactionStatus;
-  createdAt: Date;
-  description: string;
-  rideId?: string;
-}
-
-// Тестовые данные для демонстрации
-const MOCK_TRANSACTIONS: Transaction[] = [
-  {
-    id: '1',
-    userId: 'user1',
-    amount: 500,
-    type: TransactionType.DEPOSIT,
-    status: TransactionStatus.COMPLETED,
-    createdAt: new Date('2023-11-29T14:30:00'),
-    description: 'Пополнение счета',
-  },
-  {
-    id: '2',
-    userId: 'user1',
-    amount: -225,
-    type: TransactionType.RIDE_PAYMENT,
-    status: TransactionStatus.COMPLETED,
-    createdAt: new Date('2023-11-28T16:00:00'),
-    description: 'Оплата поездки #DR28112023',
-    rideId: '1',
-  },
-  {
-    id: '3',
-    userId: 'user1',
-    amount: -180,
-    type: TransactionType.RIDE_PAYMENT,
-    status: TransactionStatus.COMPLETED,
-    createdAt: new Date('2023-11-27T11:30:00'),
-    description: 'Оплата поездки #MT27112023',
-    rideId: '2',
-  },
-  {
-    id: '4',
-    userId: 'user1',
-    amount: 50,
-    type: TransactionType.REFUND,
-    status: TransactionStatus.COMPLETED,
-    createdAt: new Date('2023-11-25T18:30:00'),
-    description: 'Возврат за отмененную поездку',
-    rideId: '3',
-  },
-  {
-    id: '5',
-    userId: 'user1',
-    amount: 100,
-    type: TransactionType.BONUS,
-    status: TransactionStatus.COMPLETED,
-    createdAt: new Date('2023-11-24T10:15:00'),
-    description: 'Бонус за первую поездку',
-  },
-  {
-    id: '6',
-    userId: 'user1',
-    amount: 300,
-    type: TransactionType.DEPOSIT,
-    status: TransactionStatus.PENDING,
-    createdAt: new Date('2023-11-30T09:30:00'),
-    description: 'Пополнение счета (в обработке)',
-  },
-];
+import { transactionsService } from '@/services/api';
+import { Transaction as TxModel, TransactionType as TxType, TransactionStatus as TxStatus } from '@/models/Transaction';
 
 export default function TransactionsScreen() {
   const router = useRouter();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<TxModel[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<
-    Transaction[]
+    TxModel[]
   >([]);
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState<'all' | TransactionType>(
+  const [activeFilter, setActiveFilter] = useState<'all' | TxType>(
     'all'
   );
   const [selectedPeriod, setSelectedPeriod] = useState<
@@ -119,114 +32,19 @@ export default function TransactionsScreen() {
   >('month');
 
   useEffect(() => {
-    // Имитация загрузки данных
-    setTimeout(() => {
-      const mockTransactions: Transaction[] = [
-        {
-          id: '1',
-          userId: 'user1',
-          amount: 1000,
-          type: TransactionType.DEPOSIT,
-          status: TransactionStatus.COMPLETED,
-          createdAt: new Date('2023-07-25T14:30:00'),
-          description: 'Пополнение баланса',
-        },
-        {
-          id: '2',
-          userId: 'user1',
-          amount: -450,
-          type: TransactionType.RIDE_PAYMENT,
-          status: TransactionStatus.COMPLETED,
-          createdAt: new Date('2023-07-23T15:15:00'),
-          description: 'Оплата поездки: Tesla Model 3',
-          rideId: '1',
-        },
-        {
-          id: '3',
-          userId: 'user1',
-          amount: -300,
-          type: TransactionType.RIDE_PAYMENT,
-          status: TransactionStatus.COMPLETED,
-          createdAt: new Date('2023-07-20T10:45:00'),
-          description: 'Оплата поездки: BMW i3',
-          rideId: '2',
-        },
-        {
-          id: '4',
-          userId: 'user1',
-          amount: 600,
-          type: TransactionType.REFUND,
-          status: TransactionStatus.COMPLETED,
-          createdAt: new Date('2023-07-18T19:50:00'),
-          description: 'Возврат средств за отмененную поездку',
-          rideId: '3',
-        },
-        {
-          id: '5',
-          userId: 'user1',
-          amount: -200,
-          type: TransactionType.RIDE_PAYMENT,
-          status: TransactionStatus.COMPLETED,
-          createdAt: new Date('2023-07-15T09:50:00'),
-          description: 'Оплата поездки: Tesla Model S',
-          rideId: '4',
-        },
-        {
-          id: '6',
-          userId: 'user1',
-          amount: 2000,
-          type: TransactionType.DEPOSIT,
-          status: TransactionStatus.COMPLETED,
-          createdAt: new Date('2023-07-12T11:20:00'),
-          description: 'Пополнение баланса',
-          rideId: '5',
-        },
-        {
-          id: '7',
-          userId: 'user1',
-          amount: 500,
-          type: TransactionType.BONUS,
-          status: TransactionStatus.COMPLETED,
-          createdAt: new Date('2023-07-10T16:55:00'),
-          description: 'Бонус за приглашение друга',
-          rideId: '6',
-        },
-        {
-          id: '8',
-          userId: 'user1',
-          amount: -150,
-          type: TransactionType.PENALTY,
-          status: TransactionStatus.COMPLETED,
-          createdAt: new Date('2023-07-05T12:15:00'),
-          description: 'Штраф за несоблюдение правил парковки',
-          rideId: '7',
-        },
-        {
-          id: '9',
-          userId: 'user1',
-          amount: 1500,
-          type: TransactionType.DEPOSIT,
-          status: TransactionStatus.COMPLETED,
-          createdAt: new Date('2023-06-28T11:45:00'),
-          description: 'Пополнение баланса',
-          rideId: '8',
-        },
-        {
-          id: '10',
-          userId: 'user1',
-          amount: -380,
-          type: TransactionType.RIDE_PAYMENT,
-          status: TransactionStatus.PENDING,
-          createdAt: new Date(new Date().setHours(new Date().getHours() - 2)),
-          description: 'Оплата поездки: Mercedes EQC',
-          rideId: '9',
-        },
-      ];
-
-      setTransactions(mockTransactions);
-      setFilteredTransactions(mockTransactions);
-      setLoading(false);
-    }, 1500);
+    (async () => {
+      try {
+        setLoading(true);
+        const backendTx = await transactionsService.getTransactions({ limit: 100 } as any);
+        const converted = transactionsService.convertBackendTransactions(backendTx);
+        setTransactions(converted);
+        setFilteredTransactions(converted);
+      } catch (error) {
+        console.error('Error loading transactions:', error);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -244,51 +62,51 @@ export default function TransactionsScreen() {
     }
   };
 
-  const getTypeText = (type: TransactionType) => {
+  const getTypeText = (type: TxType) => {
     switch (type) {
-      case TransactionType.DEPOSIT:
+      case TxType.DEPOSIT:
         return 'Пополнение';
-      case TransactionType.RIDE_PAYMENT:
-        return 'Оплата поездки';
-      case TransactionType.REFUND:
-        return 'Возврат';
-      case TransactionType.BONUS:
+      case TxType.WITHDRAWAL:
+        return 'Списание';
+      case TxType.TRANSFER:
+        return 'Перевод';
+      case TxType.BONUS:
         return 'Бонус';
-      case TransactionType.PENALTY:
+      case TxType.PENALTY:
         return 'Штраф';
       default:
         return 'Неизвестно';
     }
   };
 
-  const getTypeIcon = (type: TransactionType) => {
+  const getTypeIcon = (type: TxType) => {
     switch (type) {
-      case TransactionType.DEPOSIT:
+      case TxType.DEPOSIT:
         return 'arrow-down-outline';
-      case TransactionType.RIDE_PAYMENT:
+      case TxType.WITHDRAWAL:
         return 'car-outline';
-      case TransactionType.REFUND:
-        return 'refresh-outline';
-      case TransactionType.BONUS:
+      case TxType.TRANSFER:
+        return 'swap-horizontal';
+      case TxType.BONUS:
         return 'gift-outline';
-      case TransactionType.PENALTY:
+      case TxType.PENALTY:
         return 'warning-outline';
       default:
         return 'help-circle-outline';
     }
   };
 
-  const getTypeColor = (type: TransactionType) => {
+  const getTypeColor = (type: TxType) => {
     switch (type) {
-      case TransactionType.DEPOSIT:
+      case TxType.DEPOSIT:
         return '#34C759';
-      case TransactionType.RIDE_PAYMENT:
+      case TxType.WITHDRAWAL:
         return '#FF3B30';
-      case TransactionType.REFUND:
+      case TxType.TRANSFER:
         return '#34C759';
-      case TransactionType.BONUS:
+      case TxType.BONUS:
         return '#34C759';
-      case TransactionType.PENALTY:
+      case TxType.PENALTY:
         return '#FF3B30';
       default:
         return '#999999';
@@ -341,7 +159,7 @@ export default function TransactionsScreen() {
     return date.toLocaleDateString('ru-RU', options);
   };
 
-  const renderTransactionItem = ({ item }: { item: Transaction }) => (
+  const renderTransactionItem = ({ item }: { item: TxModel }) => (
     <TouchableOpacity
       style={styles.transactionCard}
       onPress={() => {
@@ -371,7 +189,7 @@ export default function TransactionsScreen() {
             {item.amount > 0 ? '+' : ''}
             {item.amount} монет
           </Text>
-          {item.status === TransactionStatus.PENDING && (
+          {item.status === TxStatus.PENDING && (
             <Text style={styles.pendingStatus}>В обработке</Text>
           )}
         </View>
@@ -439,15 +257,15 @@ export default function TransactionsScreen() {
           <TouchableOpacity
             style={[
               styles.filterButton,
-              activeFilter === TransactionType.DEPOSIT &&
+              activeFilter === TxType.DEPOSIT &&
                 styles.activeFilterButton,
             ]}
-            onPress={() => setActiveFilter(TransactionType.DEPOSIT)}
+            onPress={() => setActiveFilter(TxType.DEPOSIT)}
           >
             <Text
               style={[
                 styles.filterButtonText,
-                activeFilter === TransactionType.DEPOSIT &&
+                activeFilter === TxType.DEPOSIT &&
                   styles.activeFilterText,
               ]}
             >
@@ -458,53 +276,53 @@ export default function TransactionsScreen() {
           <TouchableOpacity
             style={[
               styles.filterButton,
-              activeFilter === TransactionType.RIDE_PAYMENT &&
+              activeFilter === TxType.WITHDRAWAL &&
                 styles.activeFilterButton,
             ]}
-            onPress={() => setActiveFilter(TransactionType.RIDE_PAYMENT)}
+            onPress={() => setActiveFilter(TxType.WITHDRAWAL)}
           >
             <Text
               style={[
                 styles.filterButtonText,
-                activeFilter === TransactionType.RIDE_PAYMENT &&
+                activeFilter === TxType.WITHDRAWAL &&
                   styles.activeFilterText,
               ]}
             >
-              Оплаты
+              Списания
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[
               styles.filterButton,
-              activeFilter === TransactionType.REFUND &&
+              activeFilter === TxType.TRANSFER &&
                 styles.activeFilterButton,
             ]}
-            onPress={() => setActiveFilter(TransactionType.REFUND)}
+            onPress={() => setActiveFilter(TxType.TRANSFER)}
           >
             <Text
               style={[
                 styles.filterButtonText,
-                activeFilter === TransactionType.REFUND &&
+                activeFilter === TxType.TRANSFER &&
                   styles.activeFilterText,
               ]}
             >
-              Возвраты
+              Переводы
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[
               styles.filterButton,
-              activeFilter === TransactionType.BONUS &&
+              activeFilter === TxType.BONUS &&
                 styles.activeFilterButton,
             ]}
-            onPress={() => setActiveFilter(TransactionType.BONUS)}
+            onPress={() => setActiveFilter(TxType.BONUS)}
           >
             <Text
               style={[
                 styles.filterButtonText,
-                activeFilter === TransactionType.BONUS &&
+                activeFilter === TxType.BONUS &&
                   styles.activeFilterText,
               ]}
             >
@@ -515,15 +333,15 @@ export default function TransactionsScreen() {
           <TouchableOpacity
             style={[
               styles.filterButton,
-              activeFilter === TransactionType.PENALTY &&
+              activeFilter === TxType.PENALTY &&
                 styles.activeFilterButton,
             ]}
-            onPress={() => setActiveFilter(TransactionType.PENALTY)}
+            onPress={() => setActiveFilter(TxType.PENALTY)}
           >
             <Text
               style={[
                 styles.filterButtonText,
-                activeFilter === TransactionType.PENALTY &&
+                activeFilter === TxType.PENALTY &&
                   styles.activeFilterText,
               ]}
             >
