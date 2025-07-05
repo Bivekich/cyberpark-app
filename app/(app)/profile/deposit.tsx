@@ -9,7 +9,6 @@ import {
   Alert,
   TextInput,
   ActivityIndicator,
-  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -69,35 +68,25 @@ export default function DepositScreen() {
         return;
       }
 
-      // Создаем платеж через YooKassa
+      // Создаем платеж с embedded confirmation
       const payment = await paymentsService.createTopupPayment(
         Number(amount),
         paymentType,
-        'cyberpark://payment/success'
+        'https://return.cyberpark',
+        true // embedded
       );
 
       setIsLoading(false);
 
-      if (payment.confirmation?.confirmation_url) {
-        // Открываем страницу оплаты
-        const supported = await Linking.canOpenURL(payment.confirmation.confirmation_url);
-        
-        if (supported) {
-          await Linking.openURL(payment.confirmation.confirmation_url);
-          
-          // Показываем информацию о переходе к оплате
-          Alert.alert(
-            'Переход к оплате',
-            'Вы будете перенаправлены на страницу оплаты. После успешной оплаты вернитесь в приложение.',
-            [
-              { text: 'OK', onPress: handleGoBack }
-            ]
-          );
-        } else {
-          Alert.alert('Ошибка', 'Не удалось открыть страницу оплаты');
-        }
+      if (payment.confirmation?.confirmation_token) {
+        // Переходим на экран встроенной оплаты
+        router.push(
+          `/payment/checkout?token=${encodeURIComponent(
+            payment.confirmation.confirmation_token
+          )}&paymentId=${encodeURIComponent(payment.id)}` as any
+        );
       } else {
-        Alert.alert('Ошибка', 'Не удалось получить ссылку для оплаты');
+        Alert.alert('Ошибка', 'Не удалось получить токен подтверждения');
       }
     } catch (error) {
       setIsLoading(false);

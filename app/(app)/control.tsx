@@ -78,7 +78,7 @@ export default function ControlScreen() {
   useEffect(() => {
     initializeController();
     setupWebRTCListeners();
-    
+
     return () => {
       cleanup();
     };
@@ -117,22 +117,22 @@ export default function ControlScreen() {
 
   const fetchCarDetails = async () => {
     // Mock car details - replace with actual API call
-    const mockCar: Car = {
-      id: carId || '1',
-      name: 'Cyber Racer X1',
-      locationId: 'location1',
-      status: CarStatus.AVAILABLE,
-      batteryLevel: 85,
-      maxSpeed: 25,
+      const mockCar: Car = {
+        id: carId || '1',
+        name: 'Cyber Racer X1',
+        locationId: 'location1',
+        status: CarStatus.AVAILABLE,
+        batteryLevel: 85,
+        maxSpeed: 25,
       image: 'https://via.placeholder.com/400',
-      minLevel: 1,
+        minLevel: 1,
       description: 'High-performance cyber car',
-      pricePerMinute: 10,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+        pricePerMinute: 10,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
-    setCar(mockCar);
+      setCar(mockCar);
     setControlData(prev => ({
       ...prev,
       batteryLevel: mockCar.batteryLevel,
@@ -204,13 +204,13 @@ export default function ControlScreen() {
         await useReservationAction();
       }
 
-      setIsRideActive(true);
+    setIsRideActive(true);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       
-      Alert.alert(
+    Alert.alert(
         'Поездка началась!',
         `Стоимость: ${car?.pricePerMinute} монет/мин`
-      );
+    );
     } catch (error) {
       console.error('Failed to start ride:', error);
       Alert.alert('Ошибка', 'Не удалось начать поездку');
@@ -309,7 +309,7 @@ export default function ControlScreen() {
           isFullscreen={true}
           isAudioEnabled={isAudioEnabled}
         />
-        
+
         {/* Fullscreen Controls Overlay */}
         <View style={styles.fullscreenOverlay}>
           <View style={styles.fullscreenTopBar}>
@@ -319,7 +319,7 @@ export default function ControlScreen() {
             >
               <Ionicons name="contract" size={24} color="#FFFFFF" />
             </TouchableOpacity>
-            
+
             <View style={styles.fullscreenStats}>
               <Text style={styles.overlayStatText}>
                 {controlData.speed} км/ч
@@ -329,7 +329,7 @@ export default function ControlScreen() {
               </Text>
               <Text style={[styles.overlayStatText, { color: getBatteryColor(controlData.batteryLevel) }]}>
                 {Math.round(controlData.batteryLevel)}%
-              </Text>
+                </Text>
             </View>
           </View>
 
@@ -360,13 +360,13 @@ export default function ControlScreen() {
               >
                 <Ionicons name="volume-high" size={24} color="#FFFFFF" />
               </TouchableOpacity>
-              
-              <TouchableOpacity
+
+            <TouchableOpacity
                 style={[styles.overlayActionButton, styles.endRideOverlayButton]}
-                onPress={handleEndRide}
-              >
+              onPress={handleEndRide}
+            >
                 <Ionicons name="stop" size={24} color="#FFFFFF" />
-              </TouchableOpacity>
+            </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -406,7 +406,7 @@ export default function ControlScreen() {
               >
                 <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
               </TouchableOpacity>
-              
+
               <View style={styles.headerInfo}>
                 <Text style={styles.carName}>{car?.name}</Text>
                 {isRideActive && (
@@ -415,9 +415,9 @@ export default function ControlScreen() {
                   </Text>
                 )}
               </View>
-              
+
               <View style={styles.batteryIndicator}>
-                <Ionicons 
+                <Ionicons
                   name="battery-half" 
                   size={20} 
                   color={getBatteryColor(controlData.batteryLevel)} 

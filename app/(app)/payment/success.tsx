@@ -18,6 +18,7 @@ export default function PaymentSuccessScreen() {
   const [loading, setLoading] = useState(true);
   const [paymentStatus, setPaymentStatus] = useState<'success' | 'pending' | 'failed'>('pending');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [creditedAmount, setCreditedAmount] = useState<number | null>(null);
   const params = useLocalSearchParams();
 
   useEffect(() => {
@@ -56,6 +57,10 @@ export default function PaymentSuccessScreen() {
         
         if (status === 'succeeded') {
           setPaymentStatus('success');
+          try {
+            const payment = await paymentsService.getPayment(paymentId);
+            setCreditedAmount(parseFloat(payment.amount.value));
+          } catch {}
         } else if (status === 'pending') {
           setPaymentStatus('pending');
           // Можно добавить повторную проверку через некоторое время
@@ -104,7 +109,9 @@ export default function PaymentSuccessScreen() {
           </View>
           <Text style={styles.successTitle}>Платеж успешен!</Text>
           <Text style={styles.successText}>
-            Ваш баланс был пополнен. Средства будут зачислены в течение нескольких минут.
+            {creditedAmount !== null
+              ? `Ваш баланс будет пополнен на ${creditedAmount.toFixed(2)} ₽. В скором времени изменения отобразятся.`
+              : 'Ваш баланс был пополнен. В скором времени изменения отобразятся.'}
           </Text>
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.primaryButton} onPress={handleGoHome}>

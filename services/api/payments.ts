@@ -112,7 +112,8 @@ class PaymentsService {
   async createTopupPayment(
     amount: number,
     paymentType: string = 'bank_card',
-    returnUrl?: string
+    returnUrl?: string,
+    embedded: boolean = false
   ): Promise<PaymentResponse> {
     try {
       const token = await SecureStore.getItemAsync('token');
@@ -122,13 +123,21 @@ class PaymentsService {
           value: amount.toFixed(2),
           currency: 'RUB',
         },
-        payment_method_data: {
-          type: paymentType as any,
-        },
-        confirmation: {
-          type: 'redirect',
-          return_url: returnUrl || 'https://cyberpark.app/payment/success',
-        },
+        ...(embedded
+          ? {}
+          : {
+              payment_method_data: {
+                type: paymentType as any,
+              },
+            }),
+        confirmation: embedded
+          ? {
+              type: 'embedded',
+            }
+          : {
+              type: 'redirect',
+              return_url: returnUrl || 'https://cyberpark.app/payment/success',
+            },
         description: `Пополнение баланса CyberPark на ${amount} рублей`,
         capture: true,
       };

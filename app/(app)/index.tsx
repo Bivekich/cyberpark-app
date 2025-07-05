@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import { router } from 'expo-router';
 import { Car, CarStatus } from '@/models/Car';
 import { balanceService } from '@/services/api/balance';
 import { ReservationTimer } from '@/components/ui/ReservationTimer';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -35,6 +36,13 @@ export default function HomeScreen() {
     fetchCarsData();
     fetchBalance();
   }, []);
+
+  // Обновляем баланс каждый раз, когда экран получает фокус
+  useFocusEffect(
+    useCallback(() => {
+      fetchBalance();
+    }, [])
+  );
 
   const fetchBalance = async () => {
     try {

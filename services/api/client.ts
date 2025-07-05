@@ -59,12 +59,28 @@ export class ApiClient {
       }
 
       // Выполняем запрос
-      const response = await fetch(`${API_URL}${endpoint}`, requestOptions);
+      let response = await fetch(`${API_URL}${endpoint}`, requestOptions);
+
+      // Если токен истёк, пытаемся обновить и повторить запрос (один раз)
+      if (response.status === 401 && isAuth) {
+        const refreshed = await this.refreshToken();
+
+        if (refreshed) {
+          // Обновляем заголовок Authorization новым токеном
+          const newAccessToken = await SecureStore.getItemAsync('token');
+          if (newAccessToken) {
+            headers['Authorization'] = `Bearer ${newAccessToken}`;
+            requestOptions.headers = headers;
+            response = await fetch(`${API_URL}${endpoint}`, requestOptions);
+          }
+        }
+      }
+
       const data = await response.json();
 
-      // Если запрос неуспешен, выбрасываем ошибку
+      // Если запрос неуспешен после возможного повторного вызова
       if (!response.ok) {
-        return { error: data.message || 'Ошибка сервера' };
+        return { error: data?.message || 'Ошибка сервера' };
       }
 
       return { data };
