@@ -6,12 +6,14 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Car, CarStatus } from '@/models/Car';
 import { useReservation } from '@/contexts/ReservationContext';
 import { ReservationTimer } from './ReservationTimer';
+import { balanceService } from '@/services/api/balance';
 
 interface CarCardProps {
   car: Car;
@@ -19,7 +21,7 @@ interface CarCardProps {
 }
 
 export function CarCard({ car, onRefresh }: CarCardProps) {
-  const { activeReservation, isLoading, createReservation, cancelReservation } = useReservation();
+  const { activeReservation, assignedCarUnit, isLoading, createReservation, cancelReservation } = useReservation();
 
   const getStatusText = (status: CarStatus) => {
     switch (status) {
@@ -83,9 +85,65 @@ export function CarCard({ car, onRefresh }: CarCardProps) {
   const canCancelReservation = isReservedByMe;
 
   const handleReserve = async () => {
-    const success = await createReservation(car.id);
-    if (success && onRefresh) {
-      onRefresh();
+    try {
+      // Check if user has sufficient balance (minimum 5 minutes worth)
+      const userBalance = await balanceService.getUserBalance();
+      const minimumRequired = car.pricePerMinute * 5; // 5 minutes minimum
+      
+      if (userBalance < minimumRequired) {
+        Alert.alert(
+          'Недостаточно средств',
+          `Резервация бесплатна, но для поездки требуется минимум ${minimumRequired} монет (5 минут). Ваш баланс: ${userBalance} монет.`,
+          [
+            { text: 'Отмена', style: 'cancel' },
+            { 
+              text: 'Пополнить', 
+              onPress: () => router.push('/(app)/profile/deposit')
+            }
+          ]
+        );
+        return;
+      }
+      
+      const success = await createReservation(car.id);
+      if (success && onRefresh) {
+        onRefresh();
+      }
+    } catch (error) {
+      console.error('Error reserving car:', error);
+      Alert.alert('Ошибка', 'Не удалось зарезервировать машину');
+    }
+  };
+
+  const handleStartNow = async () => {
+    try {
+      // Check if user has sufficient balance (minimum 5 minutes worth for immediate start)
+      const userBalance = await balanceService.getUserBalance();
+      const minimumRequired = car.pricePerMinute * 5; // 5 minutes minimum for immediate start
+      
+      if (userBalance < minimumRequired) {
+        Alert.alert(
+          'Недостаточно средств',
+          `Для немедленного старта требуется минимум ${minimumRequired} монет (5 минут поездки). Ваш баланс: ${userBalance} монет.`,
+          [
+            { text: 'Отмена', style: 'cancel' },
+            { 
+              text: 'Пополнить', 
+              onPress: () => router.push('/(app)/profile/deposit')
+            }
+          ]
+        );
+        return;
+      }
+      
+      // Navigate directly to control screen with correct parameter name
+      router.push({
+        pathname: '/(app)/control',
+        params: { id: car.id }
+      });
+    } catch (error) {
+      console.error('Error starting car immediately:', error);
+      Alert.alert('Ошибка', 'Не удалось начать поездку');
     }
   };
 
@@ -114,20 +172,13 @@ export function CarCard({ car, onRefresh }: CarCardProps) {
     <View style={styles.carCard}>
       <View style={styles.carHeader}>
         <Text style={styles.carName}>{car.name}</Text>
-        <View
-          style={[
-            styles.statusBadge,
-            { backgroundColor: getStatusColor(car.status) + '20' },
-          ]}
-        >
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(car.status) + '20' }]}>
           <Ionicons
             name={getStatusIcon(car.status)}
-            size={14}
+            size={12}
             color={getStatusColor(car.status)}
           />
-          <Text
-            style={[styles.statusText, { color: getStatusColor(car.status) }]}
-          >
+          <Text style={[styles.statusText, { color: getStatusColor(car.status) }]}>
             {getStatusText(car.status)}
           </Text>
         </View>
@@ -163,6 +214,7 @@ export function CarCard({ car, onRefresh }: CarCardProps) {
         <View style={styles.reservationSection}>
           <ReservationTimer
             reservation={activeReservation}
+            assignedCarUnit={assignedCarUnit}
             onExpired={() => onRefresh?.()}
           />
           <View style={styles.reservationButtons}>
@@ -191,22 +243,39 @@ export function CarCard({ car, onRefresh }: CarCardProps) {
         </View>
       )}
 
-      {/* Кнопка резервации для доступных машин */}
+      {/* Двойные кнопки для доступных машин */}
       {canReserve && (
-        <TouchableOpacity
-          style={styles.reserveButton}
-          onPress={handleReserve}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator size="small" color="#121220" />
-          ) : (
-            <>
-              <Ionicons name="time" size={16} color="#121220" />
-              <Text style={styles.reserveButtonText}>Зарезервировать на 10 мин</Text>
-            </>
-          )}
-        </TouchableOpacity>
+        <View style={styles.actionsContainer}>
+          <TouchableOpacity
+            style={styles.reserveButton}
+            onPress={handleReserve}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#121220" />
+            ) : (
+              <>
+                <Ionicons name="time" size={16} color="#121220" />
+                <Text style={styles.reserveButtonText}>Зарезервировать</Text>
+              </>
+            )}
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.startNowButton}
+            onPress={handleStartNow}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <>
+                <Ionicons name="play" size={16} color="#FFFFFF" />
+                <Text style={styles.startNowButtonText}>Начать сейчас</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
       )}
     </View>
   );
@@ -314,6 +383,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 4,
   },
+  actionsContainer: {
+    flexDirection: 'column',
+    gap: 8,
+  },
   reserveButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -324,6 +397,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   reserveButtonText: {
+    color: '#121220',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginLeft: 6,
+  },
+  startNowButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#00FFAA',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  startNowButtonText: {
     color: '#121220',
     fontSize: 14,
     fontWeight: 'bold',

@@ -19,6 +19,30 @@ class BalanceService {
   }
 
   /**
+   * Списание средств за поездку
+   */
+  async deductForRide(amount: number, carName: string, duration: number): Promise<{ success: boolean; newBalance: number; error?: string }> {
+    try {
+      console.log('Balance Service: Deducting for ride:', { amount, carName, duration });
+      const response = await client.post('/payments/deduct-for-ride', {
+        amount,
+        carName,
+        duration
+      });
+
+      console.log('Balance Service: Deduction response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Balance Service: Error deducting for ride:', error);
+      return {
+        success: false,
+        newBalance: 0,
+        error: 'Ошибка при списании средств'
+      };
+    }
+  }
+
+  /**
    * Симуляция успешного платежа (для тестирования)
    */
   async simulatePaymentSuccess(paymentId: string): Promise<boolean> {

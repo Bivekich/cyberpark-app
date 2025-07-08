@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Car, CarStatus } from '@/models/Car';
+import { carsService } from '@/services/api/cars';
 import { CarCard } from '@/components/ui/CarCard';
 
 export default function CatalogScreen() {
@@ -61,96 +62,9 @@ export default function CatalogScreen() {
     try {
       setIsLoading(true);
 
-      // Здесь должен быть реальный вызов API
-      // Заглушка для демонстрации
-      const mockCars: Car[] = [
-        {
-          id: '1',
-          name: 'Cyber Racer X1',
-          locationId: 'location1',
-          status: CarStatus.AVAILABLE,
-          batteryLevel: 85,
-          maxSpeed: 25,
-          image: 'https://via.placeholder.com/150',
-          minLevel: 1,
-          description: 'Быстрый гоночный кибермобиль для новичков',
-          pricePerMinute: 10,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: '2',
-          name: 'Drift King V8',
-          locationId: 'location1',
-          status: CarStatus.AVAILABLE,
-          batteryLevel: 92,
-          maxSpeed: 30,
-          image: 'https://via.placeholder.com/150',
-          minLevel: 2,
-          description: 'Специализирован на дрифте и крутых поворотах',
-          pricePerMinute: 15,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: '3',
-          name: 'Monster Truck Mini',
-          locationId: 'location2',
-          status: CarStatus.BUSY,
-          batteryLevel: 78,
-          maxSpeed: 20,
-          image: 'https://via.placeholder.com/150',
-          minLevel: 1,
-          description: 'Проходимость по любым поверхностям',
-          pricePerMinute: 12,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: '4',
-          name: 'Stealth Ninja EV',
-          locationId: 'location2',
-          status: CarStatus.CHARGING,
-          batteryLevel: 35,
-          maxSpeed: 28,
-          image: 'https://via.placeholder.com/150',
-          minLevel: 3,
-          description: 'Тихий и быстрый, идеален для дрифта',
-          pricePerMinute: 18,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: '5',
-          name: 'Roadster Turbo',
-          locationId: 'location3',
-          status: CarStatus.MAINTENANCE,
-          batteryLevel: 0,
-          maxSpeed: 35,
-          image: 'https://via.placeholder.com/150',
-          minLevel: 4,
-          description: 'Максимальная скорость для опытных гонщиков',
-          pricePerMinute: 20,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: '6',
-          name: 'Dune Buggy Mini',
-          locationId: 'location3',
-          status: CarStatus.OFFLINE,
-          batteryLevel: 40,
-          maxSpeed: 22,
-          image: 'https://via.placeholder.com/150',
-          minLevel: 2,
-          description: 'Проходимость по песчаным трассам',
-          pricePerMinute: 14,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ];
-
-      setCars(mockCars);
+      // Fetch real cars data from backend
+      const fetchedCars = await carsService.getCars();
+      setCars(fetchedCars);
     } catch (error) {
       console.error('Error fetching cars:', error);
     } finally {
@@ -419,13 +333,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 4,
-    paddingVertical: 8,
+    height: 36,
     paddingHorizontal: 12,
-    borderRadius: 20,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    minWidth: 100,
   },
   filterGridText: {
     fontSize: 14,

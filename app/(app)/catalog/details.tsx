@@ -15,8 +15,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Car, CarStatus } from '@/models/Car';
+import { carsService } from '@/services/api/cars';
 import { useReservation } from '@/contexts/ReservationContext';
 import { ReservationTimer } from '@/components/ui/ReservationTimer';
+import { balanceService } from '@/services/api/balance';
 
 export default function CarDetailsScreen() {
   const params = useLocalSearchParams();
@@ -37,40 +39,31 @@ export default function CarDetailsScreen() {
   const fetchCarDetails = async () => {
     try {
       setIsLoading(true);
-      // В реальном приложении здесь должен быть API-запрос
-      // Заглушка для демонстрации
-      setTimeout(() => {
-        const mockCar: Car = {
-          id: carId || '1',
-          name: 'Cyber Racer X1',
-          locationId: 'location1',
-          status: CarStatus.AVAILABLE,
-          batteryLevel: 85,
-          maxSpeed: 25,
-          image: 'https://via.placeholder.com/400',
-          minLevel: 1,
-          description:
-            'Быстрый гоночный кибермобиль для новичков. Легкое управление, отличная маневренность и достаточная скорость делают эту модель идеальной для начинающих гонщиков. Специально разработанный дизайн корпуса обеспечивает низкое сопротивление ветру.',
-          pricePerMinute: 10,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
+      
+      // Fetch real car data from backend
+      const fetchedCar = await carsService.getCarById(carId);
+      
+      if (!fetchedCar) {
+        Alert.alert('Ошибка', 'Машина не найдена');
+        router.back();
+        return;
+      }
 
-        // Мок изображений локации
-        const mockLocationImages = [
-          'https://via.placeholder.com/300?text=Location+1',
-          'https://via.placeholder.com/300?text=Location+2',
-          'https://via.placeholder.com/300?text=Location+3',
-        ];
+      // Mock location images for now (can be added to backend later)
+      const mockLocationImages = [
+        'https://via.placeholder.com/300?text=Location+1',
+        'https://via.placeholder.com/300?text=Location+2',
+        'https://via.placeholder.com/300?text=Location+3',
+      ];
 
-        setCar(mockCar);
-        setLocationImages(mockLocationImages);
-        setIsLoading(false);
-      }, 1000);
+      setCar(fetchedCar);
+      setLocationImages(mockLocationImages);
     } catch (error) {
       console.error('Error fetching car details:', error);
       Alert.alert('Ошибка', 'Не удалось загрузить информацию о машине');
       router.back();
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -119,6 +112,73 @@ export default function CarDetailsScreen() {
       pathname: '/control',
       params: { id: car.id, action: 'rent' },
     });
+  };
+
+  const handleReserveCar = async () => {
+    if (!car) return;
+
+    try {
+      // Check if user has sufficient balance (minimum 5 minutes worth)
+      const userBalance = await balanceService.getUserBalance();
+      const minimumRequired = car.pricePerMinute * 5; // 5 minutes minimum
+      
+      if (userBalance < minimumRequired) {
+        Alert.alert(
+          'Недостаточно средств',
+          `Резервация бесплатна, но для поездки требуется минимум ${minimumRequired} монет (5 минут). Ваш баланс: ${userBalance} монет.`,
+          [
+            { text: 'Отмена', style: 'cancel' },
+            { 
+              text: 'Пополнить', 
+              onPress: () => router.push('/(app)/profile/deposit')
+            }
+          ]
+        );
+        return;
+      }
+
+      const success = await createReservation(car.id);
+      if (success) {
+        // Контекст уже показывает сообщение, просто возвращаемся назад
+        router.back();
+      }
+    } catch (error) {
+      console.error('Failed to reserve car:', error);
+      Alert.alert('Ошибка', 'Не удалось зарезервировать машину');
+    }
+  };
+
+  const handleStartImmediately = async () => {
+    if (!car) return;
+
+    try {
+      // Check if user has sufficient balance (minimum 5 minutes worth for immediate start)
+      const userBalance = await balanceService.getUserBalance();
+      const minimumRequired = car.pricePerMinute * 5; // 5 minutes minimum for immediate start
+      
+      if (userBalance < minimumRequired) {
+        Alert.alert(
+          'Недостаточно средств',
+          `Для немедленного старта требуется минимум ${minimumRequired} монет (5 минут поездки). Ваш баланс: ${userBalance} монет.`,
+          [
+            { text: 'Отмена', style: 'cancel' },
+            { 
+              text: 'Пополнить', 
+              onPress: () => router.push('/(app)/profile/deposit')
+            }
+          ]
+        );
+        return;
+      }
+
+      router.push({
+        pathname: '/control',
+        params: { id: car.id, action: 'start_immediately' },
+      });
+    } catch (error) {
+      console.error('Error starting car immediately:', error);
+      Alert.alert('Ошибка', 'Не удалось начать поездку');
+    }
   };
 
   const renderLocationImage = ({ item }: { item: string }) => (
@@ -244,12 +304,23 @@ export default function CarDetailsScreen() {
             </View>
 
             {car?.status === CarStatus.AVAILABLE && (
-              <TouchableOpacity
-                style={styles.rentButton}
-                onPress={handleRentCar}
-              >
-                <Text style={styles.rentButtonText}>Арендовать машину</Text>
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity
+                  style={styles.reserveButton}
+                  onPress={handleReserveCar}
+                >
+                  <Ionicons name="calendar-outline" size={20} color="#00FFAA" />
+                  <Text style={styles.reserveButtonText}>Зарезервировать</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={styles.startButton}
+                  onPress={handleStartImmediately}
+                >
+                  <Ionicons name="play" size={20} color="#121220" />
+                  <Text style={styles.startButtonText}>Начать сейчас</Text>
+                </TouchableOpacity>
+              </>
             )}
 
             {car?.status !== CarStatus.AVAILABLE && (
@@ -411,12 +482,42 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 12, // Adjusted margin for spacing between buttons
   },
   rentButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#121220',
+  },
+  reserveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 255, 170, 0.1)',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  reserveButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#00FFAA',
+    marginLeft: 10,
+  },
+  startButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#00FFAA',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  startButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#121220',
+    marginLeft: 10,
   },
   unavailableMessage: {
     flexDirection: 'row',

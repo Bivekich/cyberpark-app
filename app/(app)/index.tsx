@@ -19,12 +19,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Car, CarStatus } from '@/models/Car';
 import { balanceService } from '@/services/api/balance';
+import { carsService } from '@/services/api/cars';
 import { ReservationTimer } from '@/components/ui/ReservationTimer';
 import { useFocusEffect } from '@react-navigation/native';
 
 export default function HomeScreen() {
   const { user } = useAuth();
-  const { activeReservation, refreshActiveReservation } = useReservation();
+  const { activeReservation, assignedCarUnit, refreshActiveReservation } = useReservation();
   const [recentCars, setRecentCars] = useState<Car[]>([]);
   const [nearbyAvailable, setNearbyAvailable] = useState<Car[]>([]);
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
@@ -56,64 +57,21 @@ export default function HomeScreen() {
   const fetchCarsData = async () => {
     try {
       setIsLoading(true);
-      // Здесь должны быть реальные вызовы API
-      // Заглушка для демонстрации
-      const mockCars: Car[] = [
-        {
-          id: '1',
-          name: 'Cyber Racer X1',
-          locationId: 'location1',
-          status: CarStatus.AVAILABLE,
-          batteryLevel: 85,
-          maxSpeed: 25,
-          image: 'https://via.placeholder.com/150',
-          minLevel: 1,
-          description: 'Быстрый гоночный кибермобиль для новичков',
-          pricePerMinute: 10,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: '2',
-          name: 'Drift King V8',
-          locationId: 'location1',
-          status: CarStatus.AVAILABLE,
-          batteryLevel: 92,
-          maxSpeed: 30,
-          image: 'https://via.placeholder.com/150',
-          minLevel: 2,
-          description: 'Специализирован на дрифте и крутых поворотах',
-          pricePerMinute: 15,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: '3',
-          name: 'Monster Truck Mini',
-          locationId: 'location2',
-          status: CarStatus.AVAILABLE,
-          batteryLevel: 78,
-          maxSpeed: 20,
-          image: 'https://via.placeholder.com/150',
-          minLevel: 1,
-          description: 'Проходимость по любым поверхностям',
-          pricePerMinute: 12,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ];
+      
+      // Fetch real cars data from backend
+      const cars = await carsService.getCars();
+      
+      // Set recent cars (latest 2)
+      setRecentCars(cars.slice(0, 2));
 
-      setRecentCars(mockCars.slice(0, 2));
-
-      // Получаем доступные машины
-      const availableCars = mockCars.filter(
+      // Get available cars for quick start
+      const availableCars = cars.filter(
         (car) => car.status === CarStatus.AVAILABLE
       );
       setNearbyAvailable(availableCars);
 
-      // Выбираем машину для быстрого старта (если есть доступные)
+      // Select first available car for quick start
       if (availableCars.length > 0) {
-        // По умолчанию выбираем первую доступную машину
         setSelectedCar(availableCars[0]);
       }
     } catch (error) {
@@ -314,6 +272,7 @@ export default function HomeScreen() {
                     <Text style={styles.reservationTitle}>Активная резервация</Text>
                     <ReservationTimer
                       reservation={activeReservation}
+                      assignedCarUnit={assignedCarUnit}
                       onExpired={refreshActiveReservation}
                     />
                   </View>

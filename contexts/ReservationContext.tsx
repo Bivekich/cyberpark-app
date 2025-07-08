@@ -2,9 +2,11 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Alert } from 'react-native';
 import { Reservation, ReservationStatus } from '@/models/Reservation';
 import { reservationService } from '@/services/api/reservations';
+import { CarUnit, carUnitsService } from '@/services/api/carUnits';
 
 interface ReservationContextType {
   activeReservation: Reservation | null;
+  assignedCarUnit: CarUnit | null;
   isLoading: boolean;
   createReservation: (carId: string) => Promise<boolean>;
   cancelReservation: () => Promise<boolean>;
@@ -20,6 +22,7 @@ interface ReservationProviderProps {
 
 export function ReservationProvider({ children }: ReservationProviderProps) {
   const [activeReservation, setActiveReservation] = useState<Reservation | null>(null);
+  const [assignedCarUnit, setAssignedCarUnit] = useState<CarUnit | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Загружаем активную резервацию при инициализации
@@ -34,6 +37,7 @@ export function ReservationProvider({ children }: ReservationProviderProps) {
     const checkReservationStatus = () => {
       if (reservationService.isReservationExpired(activeReservation)) {
         setActiveReservation(null);
+        setAssignedCarUnit(null);
         Alert.alert(
           'Резервация истекла',
           'Время резервации машины истекло. Машина снова доступна для бронирования.'
@@ -53,8 +57,17 @@ export function ReservationProvider({ children }: ReservationProviderProps) {
       // Проверяем, не истекла ли резервация
       if (reservation && !reservationService.isReservationExpired(reservation)) {
         setActiveReservation(reservation);
+        
+        // Загружаем информацию о назначенной машине
+        if (reservation.carUnitId) {
+          const carUnit = await carUnitsService.getCarUnitById(reservation.carUnitId);
+          setAssignedCarUnit(carUnit);
+        } else {
+          setAssignedCarUnit(null);
+        }
       } else {
         setActiveReservation(null);
+        setAssignedCarUnit(null);
       }
     } catch (error) {
       console.error('Error refreshing active reservation:', error);
@@ -80,10 +93,22 @@ export function ReservationProvider({ children }: ReservationProviderProps) {
       
       if (reservation) {
         setActiveReservation(reservation);
-        Alert.alert(
-          'Резервация создана',
-          'Машина зарезервирована на 10 минут. Поторопитесь!'
-        );
+        
+        // Загружаем информацию о назначенной машине
+        if (reservation.carUnitId) {
+          const carUnit = await carUnitsService.getCarUnitById(reservation.carUnitId);
+          setAssignedCarUnit(carUnit);
+          
+          Alert.alert(
+            'Резервация создана',
+            `Вам назначена машина: ${carUnit?.name || 'Неизвестная машина'}. Резервация действует 10 минут и бесплатна!`
+          );
+        } else {
+          Alert.alert(
+            'Резервация создана',
+            'Машина зарезервирована на 10 минут бесплатно. Поторопитесь!'
+          );
+        }
         return true;
       } else {
         Alert.alert(
@@ -110,6 +135,7 @@ export function ReservationProvider({ children }: ReservationProviderProps) {
       
       if (success) {
         setActiveReservation(null);
+        setAssignedCarUnit(null);
         Alert.alert('Резервация отменена', 'Машина снова доступна для бронирования');
         return true;
       } else {
@@ -134,6 +160,7 @@ export function ReservationProvider({ children }: ReservationProviderProps) {
       
       if (success) {
         setActiveReservation(null);
+        setAssignedCarUnit(null);
         return true;
       } else {
         Alert.alert('Ошибка', 'Не удалось использовать резервацию');
@@ -150,6 +177,7 @@ export function ReservationProvider({ children }: ReservationProviderProps) {
 
   const value: ReservationContextType = {
     activeReservation,
+    assignedCarUnit,
     isLoading,
     createReservation,
     cancelReservation,

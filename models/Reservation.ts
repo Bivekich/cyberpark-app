@@ -13,7 +13,8 @@ export const ReservationSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
   carId: z.string().uuid(),
-  locationId: z.string().uuid(),
+  carUnitId: z.string().uuid().optional(), // specific car unit assigned to user
+  locationId: z.string().uuid().optional(), // made optional since backend doesn't track this yet
   startTime: z.date(), // время создания резервации
   expiresAt: z.date(), // время истечения (startTime + 10 минут)
   status: z.nativeEnum(ReservationStatus),

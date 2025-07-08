@@ -8,16 +8,45 @@ import {
 
 const API_URL = process.env.API_URL || 'http://localhost:3000';
 
+interface BackendReservation {
+  id: string;
+  userId: string;
+  carId: string;
+  carUnitId?: string;
+  startTime: string;
+  expiresAt: string;
+  status: 'active' | 'expired' | 'used' | 'canceled';
+  createdAt: string;
+  updatedAt: string;
+}
+
 class ReservationService {
+  private transformBackendReservation(backendReservation: BackendReservation): Reservation {
+    return {
+      id: backendReservation.id,
+      userId: backendReservation.userId,
+      carId: backendReservation.carId,
+      carUnitId: backendReservation.carUnitId,
+      locationId: 'default-location', // Default since backend doesn't track this yet
+      startTime: new Date(backendReservation.startTime),
+      expiresAt: new Date(backendReservation.expiresAt),
+      status: backendReservation.status as ReservationStatus,
+      createdAt: new Date(backendReservation.createdAt),
+      updatedAt: new Date(backendReservation.updatedAt),
+    };
+  }
   async createReservation(request: CreateReservationRequest): Promise<Reservation | null> {
     try {
       const token = await SecureStore.getItemAsync('token');
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
 
       const response = await fetch(`${API_URL}/reservations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(request),
       });
@@ -26,8 +55,8 @@ class ReservationService {
         throw new Error('Failed to create reservation');
       }
 
-      const data = await response.json();
-      return data as Reservation;
+      const backendData: BackendReservation = await response.json();
+      return this.transformBackendReservation(backendData);
     } catch (error) {
       console.error('Error creating reservation:', error);
       return null;
@@ -37,10 +66,13 @@ class ReservationService {
   async getActiveReservation(): Promise<Reservation | null> {
     try {
       const token = await SecureStore.getItemAsync('token');
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
 
       const response = await fetch(`${API_URL}/reservations/active`, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -51,8 +83,8 @@ class ReservationService {
         throw new Error('Failed to get active reservation');
       }
 
-      const data = await response.json();
-      return data as Reservation;
+      const backendData: BackendReservation = await response.json();
+      return this.transformBackendReservation(backendData);
     } catch (error) {
       console.error('Error getting active reservation:', error);
       return null;
@@ -62,6 +94,9 @@ class ReservationService {
   async getReservations(filter?: ReservationFilter): Promise<Reservation[]> {
     try {
       const token = await SecureStore.getItemAsync('token');
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
 
       const queryParams = new URLSearchParams();
       if (filter?.status) queryParams.append('status', filter.status);
@@ -90,11 +125,14 @@ class ReservationService {
   async cancelReservation(reservationId: string): Promise<boolean> {
     try {
       const token = await SecureStore.getItemAsync('token');
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
 
       const response = await fetch(`${API_URL}/reservations/${reservationId}/cancel`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -108,11 +146,14 @@ class ReservationService {
   async useReservation(reservationId: string): Promise<boolean> {
     try {
       const token = await SecureStore.getItemAsync('token');
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
 
       const response = await fetch(`${API_URL}/reservations/${reservationId}/use`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 

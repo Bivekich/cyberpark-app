@@ -3,7 +3,6 @@ import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack } from 'expo-router';
 
 export default function AppLayout() {
   const { user, isLoading } = useAuth();
@@ -66,6 +65,7 @@ export default function AppLayout() {
           tabBarIcon: ({ color }) => (
             <Ionicons name="game-controller-outline" size={24} color={color} />
           ),
+          tabBarStyle: { display: 'none' },
         }}
       />
       <Tabs.Screen
@@ -78,6 +78,7 @@ export default function AppLayout() {
         }}
       />
 
+      {/* Hide all sub-screens from tab navigation */}
       <Tabs.Screen
         name="profile/deposit"
         options={{
@@ -134,6 +135,30 @@ export default function AppLayout() {
       />
       <Tabs.Screen
         name="catalog/details"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="payment"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="payment/checkout"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="payment/success"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="profile/payment-history"
         options={{
           href: null,
         }}
