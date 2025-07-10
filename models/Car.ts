@@ -14,7 +14,7 @@ export enum CarStatus {
 export const CarSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
-  locationId: z.string().uuid(),
+  locationId: z.string().uuid().nullable(), // Allow null locationId
   status: z.nativeEnum(CarStatus),
   batteryLevel: z.number().min(0).max(100), // процент заряда
   maxSpeed: z.number().positive(), // максимальная скорость

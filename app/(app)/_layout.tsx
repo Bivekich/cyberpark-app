@@ -1,11 +1,16 @@
+import React from 'react';
 import { Tabs } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLocation } from '@/contexts/LocationContext';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LocationSelectionModal } from '@/components/ui/LocationSelectionModal';
 
 export default function AppLayout() {
   const { user, isLoading } = useAuth();
+  const { userLocation, checkLocationRequired } = useLocation();
+  const [showLocationModal, setShowLocationModal] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -13,156 +18,169 @@ export default function AppLayout() {
     }
   }, [user, isLoading]);
 
+  useEffect(() => {
+    // Check if location selection is required after user is loaded
+    if (user && !isLoading) {
+      checkLocationRequired().then((required) => {
+        if (required) {
+          setShowLocationModal(true);
+        }
+      });
+    }
+  }, [user, isLoading, userLocation]);
+
   if (isLoading || !user) {
     return null;
   }
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: '#00FFAA',
-        tabBarInactiveTintColor: '#9F9FAC',
-        tabBarStyle: {
-          backgroundColor: '#1A1A2E',
-          borderTopWidth: 1,
-          borderTopColor: '#272734',
-          height: 60,
-        },
-        tabBarLabelStyle: {
-          marginBottom: 5,
-        },
-        headerStyle: {
-          backgroundColor: '#1A1A2E',
-        },
-        headerTitleStyle: {
-          color: '#FFFFFF',
-        },
-        headerShown: false,
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Главная',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="home-outline" size={24} color={color} />
-          ),
+    <>
+      <Tabs
+        screenOptions={{
+          tabBarActiveTintColor: '#00FFAA',
+          tabBarInactiveTintColor: '#9F9FAC',
+          tabBarStyle: {
+            backgroundColor: '#1A1A2E',
+            borderTopWidth: 1,
+            borderTopColor: '#272734',
+            height: 60,
+          },
+          tabBarLabelStyle: {
+            marginBottom: 5,
+          },
+          headerStyle: {
+            backgroundColor: '#1A1A2E',
+          },
+          headerTitleStyle: {
+            color: '#FFFFFF',
+          },
+          headerShown: false,
         }}
-      />
-      <Tabs.Screen
-        name="catalog"
-        options={{
-          title: 'Машины',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="car-sport-outline" size={24} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="control"
-        options={{
-          title: 'Управление',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="game-controller-outline" size={24} color={color} />
-          ),
-          tabBarStyle: { display: 'none' },
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Профиль',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="person-outline" size={24} color={color} />
-          ),
-        }}
-      />
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: 'Главная',
+            tabBarIcon: ({ color }) => (
+              <Ionicons name="home-outline" size={24} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="catalog"
+          options={{
+            title: 'Машины',
+            tabBarIcon: ({ color }) => (
+              <Ionicons name="car-sport-outline" size={24} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="control"
+          options={{
+            title: 'Управление',
+            tabBarIcon: ({ color }) => (
+              <Ionicons name="game-controller-outline" size={24} color={color} />
+            ),
+            tabBarStyle: { display: 'none' },
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: 'Профиль',
+            tabBarIcon: ({ color }) => (
+              <Ionicons name="person-outline" size={24} color={color} />
+            ),
+          }}
+        />
 
-      {/* Hide all sub-screens from tab navigation */}
-      <Tabs.Screen
-        name="profile/deposit"
-        options={{
-          href: null,
-        }}
+        {/* Hide all sub-screens from tab navigation */}
+        <Tabs.Screen
+          name="profile/deposit"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="profile/rides"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="profile/transactions"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="profile/settings"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="profile/support"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="profile/notifications"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="profile/privacy-policy"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="profile/terms-of-service"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="profile/ride-details"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="catalog/details"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="payment/checkout"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="payment/success"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="profile/payment-history"
+          options={{
+            href: null,
+          }}
+        />
+      </Tabs>
+
+      <LocationSelectionModal
+        visible={showLocationModal}
+        mandatory={true}
+        onClose={() => setShowLocationModal(false)}
       />
-      <Tabs.Screen
-        name="profile/rides"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="profile/transactions"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="profile/settings"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="profile/support"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="profile/notifications"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="profile/privacy-policy"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="profile/terms-of-service"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="profile/ride-details"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="catalog/details"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="payment"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="payment/checkout"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="payment/success"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="profile/payment-history"
-        options={{
-          href: null,
-        }}
-      />
-    </Tabs>
+    </>
   );
 }

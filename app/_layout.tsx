@@ -1,3 +1,4 @@
+import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import {
   DarkTheme,
@@ -14,6 +15,7 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ReservationProvider } from '@/contexts/ReservationContext';
+import { LocationProvider } from '@/contexts/LocationContext';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -29,16 +31,12 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
+  const colorScheme = useColorScheme();
+  const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-    ...FontAwesome.font,
   });
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
-  useEffect(() => {
-    if (error) throw error;
-  }, [error]);
-
   useEffect(() => {
     if (loaded) {
       SplashScreen.hideAsync();
@@ -49,24 +47,28 @@ export default function RootLayout() {
     return null;
   }
 
-  return <RootLayoutNav />;
-}
-
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
-
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
-        <ReservationProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(app)" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-          <StatusBar style="auto" />
-        </ReservationProvider>
+        <LocationProvider>
+          <ReservationProvider>
+            <RootLayoutNav />
+          </ReservationProvider>
+        </LocationProvider>
       </AuthProvider>
     </ThemeProvider>
+  );
+}
+
+function RootLayoutNav() {
+  return (
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(app)" options={{ headerShown: false }} />
+        <Stack.Screen name="+not-found" />
+      </Stack>
+      <StatusBar style="auto" />
+    </>
   );
 }

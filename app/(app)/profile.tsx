@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLocation } from '@/contexts/LocationContext';
 import { Button } from '@/components/ui/Button';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -19,12 +20,15 @@ import { User } from '@/models/User';
 import * as ImagePicker from 'expo-image-picker';
 import * as SecureStore from 'expo-secure-store';
 import { getProfileImageUrl } from '@/utils/imageUtils';
+import { LocationSelectionModal } from '@/components/ui/LocationSelectionModal';
 
 export default function ProfileScreen() {
   const { user, signOut, updateUser } = useAuth();
+  const { userLocation } = useLocation();
   const [balance, setBalance] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(user?.profileImage);
+  const [showLocationModal, setShowLocationModal] = useState(false);
 
   useEffect(() => {
     fetchBalance();
@@ -87,6 +91,10 @@ export default function ProfileScreen() {
 
   const navigateToSupport = () => {
     router.push('/profile/support');
+  };
+
+  const handleLocationChange = () => {
+    setShowLocationModal(true);
   };
 
   const pickAvatar = async () => {
@@ -200,6 +208,25 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           <View style={styles.menuContainer}>
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={handleLocationChange}
+            >
+              <Ionicons name="location-outline" size={24} color="#FFFFFF" />
+              <View style={styles.menuTextContainer}>
+                <Text style={styles.menuText}>Локация</Text>
+                <Text style={styles.menuSubText}>
+                  {userLocation ? userLocation.name : 'Не выбрана'}
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color="#9F9FAC"
+                style={styles.menuArrow}
+              />
+            </TouchableOpacity>
+
             <TouchableOpacity style={styles.menuItem} onPress={navigateToRides}>
               <Ionicons name="car-sport-outline" size={24} color="#FFFFFF" />
               <Text style={styles.menuText}>История поездок</Text>
@@ -278,6 +305,10 @@ export default function ProfileScreen() {
           <Text style={styles.versionText}>Версия 1.0.0</Text>
         </ScrollView>
       </SafeAreaView>
+      <LocationSelectionModal
+        visible={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+      />
     </LinearGradient>
   );
 }
@@ -398,11 +429,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
+  menuTextContainer: {
+    marginLeft: 16,
+  },
   menuText: {
-    flex: 1,
     fontSize: 16,
     color: '#FFFFFF',
-    marginLeft: 16,
+  },
+  menuSubText: {
+    fontSize: 12,
+    color: '#9F9FAC',
   },
   menuArrow: {
     marginLeft: 8,

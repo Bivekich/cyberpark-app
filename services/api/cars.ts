@@ -13,6 +13,14 @@ interface BackendCar {
   imageUrl?: string;
   status: 'available' | 'in_use' | 'maintenance';
   quantity: number;
+  locationId?: string | null;
+  location?: {
+    id: string;
+    name: string;
+    description?: string;
+    imageUrl?: string;
+    isActive: boolean;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -23,7 +31,7 @@ export class CarsService {
     return {
       id: backendCar.id,
       name: backendCar.name,
-      locationId: 'default-location', // Since backend doesn't have locationId
+      locationId: backendCar.locationId || null, // Use actual locationId from backend
       status: this.mapBackendStatus(backendCar.status),
       batteryLevel: 100, // Default battery level since backend doesn't track this per car type
       maxSpeed: backendCar.topSpeed,
@@ -40,8 +48,6 @@ export class CarsService {
     switch (backendStatus) {
       case 'available':
         return CarStatus.AVAILABLE;
-      case 'reserved':
-        return CarStatus.RESERVED;
       case 'in_use':
         return CarStatus.BUSY;
       case 'maintenance':
@@ -82,7 +88,7 @@ export class CarsService {
       const backendCar: BackendCar = response.data;
       return this.transformBackendCar(backendCar);
     } catch (error) {
-      console.error('Error fetching car:', error);
+      console.error('Error fetching car by ID:', error);
       return null;
     }
   }
@@ -100,78 +106,23 @@ export class CarsService {
         }
       );
 
-      return response.data;
+      const backendCars: BackendCar[] = response.data;
+      return backendCars.map(car => this.transformBackendCar(car));
     } catch (error) {
       console.error('Error fetching cars by location:', error);
       return [];
     }
   }
 
-  async checkCarAvailability(carId: string, startTime: Date): Promise<boolean> {
+  async reserveCar(carId: string, duration: number = 15): Promise<boolean> {
     try {
       const token = await SecureStore.getItemAsync('token');
-
-      const response = await axios.get(
-        `${API_URL}/cars/${carId}/availability`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          params: {
-            startTime: startTime.toISOString(),
-          },
-        }
-      );
-
-      return response.data.available;
-    } catch (error) {
-      console.error('Error checking car availability:', error);
-      return false;
-    }
-  }
-
-  async controlCar(
-    carId: string,
-    command: string,
-    params?: any
-  ): Promise<boolean> {
-    try {
-      const token = await SecureStore.getItemAsync('token');
-
-      await axios.post(
-        `${API_URL}/cars/${carId}/control`,
-        {
-          command,
-          params,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      return true;
-    } catch (error) {
-      console.error('Error controlling car:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Finish a ride - releases the car unit back to available status
-   */
-  async finishRide(carUnitId?: string): Promise<{ success: boolean; message: string }> {
-    try {
-      const token = await SecureStore.getItemAsync('token');
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
 
       const response = await axios.post(
-        `${API_URL}/car-units/finish-ride`,
+        `${API_URL}/reservations`,
         {
-          carUnitId,
+          carId,
+          durationMinutes: duration,
         },
         {
           headers: {
@@ -180,28 +131,10 @@ export class CarsService {
         }
       );
 
-      // For axios, successful responses (2xx) don't throw errors
-      const data = response.data;
-      return {
-        success: true,
-        message: data.message || 'Ride finished successfully'
-      };
+      return response.status === 201;
     } catch (error) {
-      console.error('Error finishing ride:', error);
-      
-      // Handle axios errors specifically
-      if (axios.isAxiosError(error) && error.response) {
-        const errorMessage = error.response.data?.message || `HTTP ${error.response.status}: ${error.response.statusText}`;
-        return {
-          success: false,
-          message: errorMessage
-        };
-      }
-      
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Failed to finish ride'
-      };
+      console.error('Error reserving car:', error);
+      return false;
     }
   }
 }

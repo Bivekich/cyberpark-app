@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLocation } from '@/contexts/LocationContext';
 import { useReservation } from '@/contexts/ReservationContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -21,10 +22,12 @@ import { Car, CarStatus } from '@/models/Car';
 import { balanceService } from '@/services/api/balance';
 import { carsService } from '@/services/api/cars';
 import { ReservationTimer } from '@/components/ui/ReservationTimer';
+import { LocationSelectionModal } from '@/components/ui/LocationSelectionModal';
 import { useFocusEffect } from '@react-navigation/native';
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const { userLocation, showLocationSelector, setShowLocationSelector } = useLocation();
   const { activeReservation, assignedCarUnit, refreshActiveReservation } = useReservation();
   const [recentCars, setRecentCars] = useState<Car[]>([]);
   const [nearbyAvailable, setNearbyAvailable] = useState<Car[]>([]);
@@ -32,6 +35,15 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [showCarSelector, setShowCarSelector] = useState(false);
   const [balance, setBalance] = useState<number>(0);
+
+  // Debug logging for location
+  useEffect(() => {
+    console.log('🗺️ HomeScreen - userLocation changed:', userLocation);
+  }, [userLocation]);
+
+  useEffect(() => {
+    console.log('🗺️ HomeScreen - user changed:', user);
+  }, [user]);
 
   useEffect(() => {
     fetchCarsData();
@@ -85,6 +97,11 @@ export default function HomeScreen() {
   const handleSelectCar = (car: Car) => {
     setSelectedCar(car);
     setShowCarSelector(false);
+  };
+
+  // Обработчик смены локации
+  const handleLocationChange = () => {
+    setShowLocationSelector(true);
   };
 
   // Рендер элемента машины в селекторе
@@ -171,6 +188,22 @@ export default function HomeScreen() {
             <View>
               <Text style={styles.welcomeText}>Привет,</Text>
               <Text style={styles.userName}>{user?.fullName || 'Гонщик'}</Text>
+              
+              {/* Location display - always show with fallback text */}
+              <TouchableOpacity 
+                style={styles.locationContainer}
+                onPress={handleLocationChange}
+              >
+                <Ionicons 
+                  name="location" 
+                  size={16} 
+                  color={userLocation ? "#00FFAA" : "#FF9500"} 
+                />
+                <Text style={styles.locationText}>
+                  {userLocation ? userLocation.name : 'Выберите локацию'}
+                </Text>
+                <Ionicons name="chevron-down" size={16} color="#9F9FAC" />
+              </TouchableOpacity>
             </View>
             <TouchableOpacity
               style={styles.notificationButton}
@@ -423,6 +456,12 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Модальное окно для выбора локации */}
+      <LocationSelectionModal
+        visible={showLocationSelector}
+        onClose={() => setShowLocationSelector(false)}
+      />
     </LinearGradient>
   );
 }
@@ -460,6 +499,20 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 8,
+  },
+  locationText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    marginHorizontal: 8,
   },
   balanceCard: {
     backgroundColor: 'rgba(0, 255, 170, 0.05)',

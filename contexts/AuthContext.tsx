@@ -12,12 +12,15 @@ import { AuthService } from '@/services/api/auth';
 import { client } from '@/services/api/client';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as WebBrowser from 'expo-web-browser';
+import { Location } from '@/models/Location';
 
 interface User {
   id: string;
   email?: string;
   fullName?: string;
   profileImage?: string;
+  selectedLocationId?: string;
+  selectedLocation?: Location;
 }
 
 interface AuthContextType {

@@ -17,6 +17,7 @@ import { router } from 'expo-router';
 import { Car, CarStatus } from '@/models/Car';
 import { carsService } from '@/services/api/cars';
 import { CarCard } from '@/components/ui/CarCard';
+import { useLocation } from '@/contexts/LocationContext';
 
 export default function CatalogScreen() {
   const [cars, setCars] = useState<Car[]>([]);
@@ -24,6 +25,9 @@ export default function CatalogScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Use global location context for location-based filtering
+  const { userLocation } = useLocation();
 
   // Определяем все возможные статусы машин для фильтров
   const statusFilters = [
@@ -51,8 +55,12 @@ export default function CatalogScreen() {
   ];
 
   useEffect(() => {
-    fetchCars();
-  }, []);
+    if (userLocation) {
+      fetchCarsByLocation();
+    } else {
+      fetchCars();
+    }
+  }, [userLocation]);
 
   useEffect(() => {
     filterCars();
@@ -61,12 +69,30 @@ export default function CatalogScreen() {
   const fetchCars = async () => {
     try {
       setIsLoading(true);
-
-      // Fetch real cars data from backend
       const fetchedCars = await carsService.getCars();
       setCars(fetchedCars);
     } catch (error) {
       console.error('Error fetching cars:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchCarsByLocation = async () => {
+    if (!userLocation) return;
+    
+    try {
+      setIsLoading(true);
+      console.log('🚗 Fetching cars for location:', userLocation.name, userLocation.id);
+      const fetchedCars = await carsService.getCarsByLocation(userLocation.id);
+      console.log('🚗 Fetched cars:', fetchedCars.length);
+      setCars(fetchedCars);
+    } catch (error) {
+      console.error('Error fetching cars by location:', error);
+      // Fallback to all cars if location-specific fetch fails
+      const allCars = await carsService.getCars();
+      const locationCars = allCars.filter(car => car.locationId === userLocation.id);
+      setCars(locationCars);
     } finally {
       setIsLoading(false);
     }
@@ -161,7 +187,7 @@ export default function CatalogScreen() {
   };
 
   const renderCarItem = ({ item }: { item: Car }) => (
-    <CarCard car={item} onRefresh={fetchCars} />
+    <CarCard car={item} onRefresh={userLocation ? fetchCarsByLocation : fetchCars} />
   );
 
   return (
@@ -169,8 +195,14 @@ export default function CatalogScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Каталог машин</Text>
+          {userLocation && (
+            <Text style={styles.locationInfo}>
+              📍 {userLocation.name}
+            </Text>
+          )}
         </View>
 
+        {/* Search */}
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#9F9FAC" />
           <TextInput
@@ -182,24 +214,12 @@ export default function CatalogScreen() {
           />
         </View>
 
-        {/* Заголовок для фильтров */}
-        <View style={styles.filterHeaderContainer}>
-          <Text style={styles.filterHeaderText}>Статус машин</Text>
-          {selectedFilter !== 'all' && (
-            <TouchableOpacity
-              style={styles.resetFiltersButton}
-              onPress={() => setSelectedFilter('all')}
-            >
-              <Text style={styles.resetFiltersText}>Сбросить</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Обновленные фильтры в виде сетки */}
-        <ScrollView
-          horizontal
+        {/* Filters */}
+        <ScrollView 
+          horizontal 
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filtersGridContainer}
+          style={styles.filtersGridContainer}
+          contentContainerStyle={styles.filtersContentContainer}
         >
           {statusFilters.map((filter) => (
             <TouchableOpacity
@@ -234,6 +254,9 @@ export default function CatalogScreen() {
         {isLoading ? (
           <View style={styles.loaderContainer}>
             <ActivityIndicator color="#00FFAA" size="large" />
+            <Text style={styles.loadingText}>
+              {userLocation ? `Загружаем машины в ${userLocation.name}...` : 'Загружаем машины...'}
+            </Text>
           </View>
         ) : (
           <>
@@ -249,17 +272,23 @@ export default function CatalogScreen() {
               <View style={styles.emptyContainer}>
                 <Ionicons name="car-outline" size={64} color="#9F9FAC" />
                 <Text style={styles.emptyText}>
-                  Машин по заданным критериям не найдено
+                  {!userLocation 
+                    ? "Выберите локацию на главном экране, чтобы увидеть доступные машины"
+                    : filteredCars.length === 0 && cars.length === 0
+                    ? `В локации "${userLocation.name}" пока нет машин`
+                    : "Машин по заданным критериям не найдено"}
                 </Text>
-                <TouchableOpacity
-                  style={styles.resetButton}
-                  onPress={() => {
-                    setSelectedFilter('all');
-                    setSearchQuery('');
-                  }}
-                >
-                  <Text style={styles.resetButtonText}>Сбросить фильтры</Text>
-                </TouchableOpacity>
+                {userLocation && filteredCars.length === 0 && cars.length > 0 && (
+                  <TouchableOpacity
+                    style={styles.resetButton}
+                    onPress={() => {
+                      setSelectedFilter('all');
+                      setSearchQuery('');
+                    }}
+                  >
+                    <Text style={styles.resetButtonText}>Сбросить фильтры</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
           </>
@@ -285,6 +314,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
+  locationInfo: {
+    fontSize: 14,
+    color: '#00FFAA',
+    marginTop: 4,
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -300,33 +334,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginLeft: 8,
   },
-  // Новые стили для заголовка фильтров
-  filterHeaderContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 8,
-  },
-  filterHeaderText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  resetFiltersButton: {
-    padding: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 8,
-  },
-  resetFiltersText: {
-    fontSize: 14,
-    color: '#00FFAA',
-  },
-  // Новые стили для горизонтального списка фильтров
   filtersGridContainer: {
     paddingHorizontal: 16,
-    marginBottom: 16,
+    marginBottom: 10,
+    paddingVertical: 8,
     flexDirection: 'row',
+    paddingBottom: 20,
+  },
+  filtersContentContainer: {
+    paddingRight: 20, // Add padding to the right to prevent filters from being cut off
   },
   filterGridItem: {
     flexDirection: 'row',
@@ -345,91 +361,18 @@ const styles = StyleSheet.create({
     color: '#9F9FAC',
     marginLeft: 6,
   },
-  // Сохраняем оригинальные стили для совместимости
-  filtersContainer: {
-    maxHeight: 44,
-    marginBottom: 16,
-  },
-  filtersContent: {
-    paddingHorizontal: 16,
-  },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginHorizontal: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  filterText: {
-    fontSize: 14,
-    color: '#9F9FAC',
-    marginLeft: 6,
-  },
   loaderContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingText: {
+    fontSize: 16,
+    color: '#9F9FAC',
+    marginTop: 12,
+  },
   carsList: {
     padding: 16,
-  },
-  carCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-  },
-  carHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  carName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 12,
-    marginLeft: 4,
-  },
-  carImageContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 140,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  carImage: {
-    width: '100%',
-    height: '100%',
-  },
-  carSpecs: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  specItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 16,
-    marginBottom: 4,
-  },
-  specText: {
-    fontSize: 14,
-    color: '#9F9FAC',
-    marginLeft: 4,
   },
   emptyContainer: {
     flex: 1,
