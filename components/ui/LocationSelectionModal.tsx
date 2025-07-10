@@ -30,6 +30,7 @@ export function LocationSelectionModal({
     isLoadingLocations,
     setUserLocation,
     refreshLocations,
+    userLocation,
   } = useLocation();
 
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
@@ -42,9 +43,21 @@ export function LocationSelectionModal({
         availableLocations: availableLocations.length,
         isLoadingLocations,
         locations: availableLocations,
+        currentUserLocation: userLocation,
       });
     }
-  }, [visible, availableLocations, isLoadingLocations]);
+  }, [visible, availableLocations, isLoadingLocations, userLocation]);
+
+  // Pre-select current user location when modal opens
+  useEffect(() => {
+    if (visible && userLocation) {
+      console.log('🏢 LocationSelectionModal - Pre-selecting current location:', userLocation);
+      setSelectedLocation(userLocation);
+    } else if (visible && !userLocation) {
+      console.log('🏢 LocationSelectionModal - No current location to pre-select');
+      setSelectedLocation(null);
+    }
+  }, [visible, userLocation]);
 
   // Only refresh if we have no locations and we're not loading
   useEffect(() => {

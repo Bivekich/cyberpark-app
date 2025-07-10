@@ -229,7 +229,9 @@ export default function ProfileScreen() {
 
             <TouchableOpacity style={styles.menuItem} onPress={navigateToRides}>
               <Ionicons name="car-sport-outline" size={24} color="#FFFFFF" />
-              <Text style={styles.menuText}>История поездок</Text>
+              <View style={styles.menuTextContainer}>
+                <Text style={styles.menuText}>История поездок</Text>
+              </View>
               <Ionicons
                 name="chevron-forward"
                 size={20}
@@ -243,7 +245,9 @@ export default function ProfileScreen() {
               onPress={navigateToTransactions}
             >
               <Ionicons name="cash-outline" size={24} color="#FFFFFF" />
-              <Text style={styles.menuText}>История транзакций</Text>
+              <View style={styles.menuTextContainer}>
+                <Text style={styles.menuText}>История транзакций</Text>
+              </View>
               <Ionicons
                 name="chevron-forward"
                 size={20}
@@ -257,7 +261,9 @@ export default function ProfileScreen() {
               onPress={() => router.push('/profile/payment-history')}
             >
               <Ionicons name="card-outline" size={24} color="#FFFFFF" />
-              <Text style={styles.menuText}>История платежей</Text>
+              <View style={styles.menuTextContainer}>
+                <Text style={styles.menuText}>История платежей</Text>
+              </View>
               <Ionicons
                 name="chevron-forward"
                 size={20}
@@ -271,7 +277,9 @@ export default function ProfileScreen() {
               onPress={navigateToSettings}
             >
               <Ionicons name="settings-outline" size={24} color="#FFFFFF" />
-              <Text style={styles.menuText}>Настройки профиля</Text>
+              <View style={styles.menuTextContainer}>
+                <Text style={styles.menuText}>Настройки профиля</Text>
+              </View>
               <Ionicons
                 name="chevron-forward"
                 size={20}
@@ -285,7 +293,9 @@ export default function ProfileScreen() {
               onPress={navigateToSupport}
             >
               <Ionicons name="help-circle-outline" size={24} color="#FFFFFF" />
-              <Text style={styles.menuText}>Поддержка</Text>
+              <View style={styles.menuTextContainer}>
+                <Text style={styles.menuText}>Поддержка</Text>
+              </View>
               <Ionicons
                 name="chevron-forward"
                 size={20}
@@ -430,6 +440,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
   menuTextContainer: {
+    flex: 1,
     marginLeft: 16,
   },
   menuText: {
@@ -441,7 +452,7 @@ const styles = StyleSheet.create({
     color: '#9F9FAC',
   },
   menuArrow: {
-    marginLeft: 8,
+    marginLeft: 'auto',
   },
   signOutButton: {
     marginBottom: 16,
