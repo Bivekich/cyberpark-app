@@ -13,6 +13,7 @@ interface BackendCar {
   imageUrl?: string;
   status: 'available' | 'in_use' | 'maintenance';
   quantity: number;
+  minLevel: number;
   locationId?: string | null;
   location?: {
     id: string;
@@ -36,7 +37,7 @@ export class CarsService {
       batteryLevel: 100, // Default battery level since backend doesn't track this per car type
       maxSpeed: backendCar.topSpeed,
       image: backendCar.imageUrl || 'https://via.placeholder.com/300x200?text=' + encodeURIComponent(backendCar.name),
-      minLevel: 1, // Default level requirement
+      minLevel: backendCar.minLevel || 1, // Use actual minimum level from backend
       description: backendCar.description,
       pricePerMinute: backendCar.pricePerMinute,
       createdAt: new Date(backendCar.createdAt),

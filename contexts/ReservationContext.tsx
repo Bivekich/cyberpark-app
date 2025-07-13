@@ -91,35 +91,48 @@ export function ReservationProvider({ children }: ReservationProviderProps) {
 
       const reservation = await reservationService.createReservation({ carId });
       
-      if (reservation) {
-        setActiveReservation(reservation);
-        
-        // Загружаем информацию о назначенной машине
-        if (reservation.carUnitId) {
-          const carUnit = await carUnitsService.getCarUnitById(reservation.carUnitId);
-          setAssignedCarUnit(carUnit);
-          
-          Alert.alert(
-            'Резервация создана',
-            `Вам назначена машина: ${carUnit?.name || 'Неизвестная машина'}. Резервация действует 10 минут и бесплатна!`
-          );
-        } else {
-          Alert.alert(
-            'Резервация создана',
-            'Машина зарезервирована на 10 минут бесплатно. Поторопитесь!'
-          );
-        }
-        return true;
-      } else {
+      if (!reservation) {
         Alert.alert(
           'Ошибка резервации',
           'Не удалось зарезервировать машину. Возможно, она уже занята.'
         );
         return false;
       }
+      
+      setActiveReservation(reservation);
+      
+      // Загружаем информацию о назначенной машине
+      if (reservation.carUnitId) {
+        const carUnit = await carUnitsService.getCarUnitById(reservation.carUnitId);
+        setAssignedCarUnit(carUnit);
+        
+        Alert.alert(
+          'Резервация создана',
+          `Вам назначена машина: ${carUnit?.name || 'Неизвестная машина'}. Резервация действует 10 минут и бесплатна!`
+        );
+      } else {
+        Alert.alert(
+          'Резервация создана',
+          'Машина зарезервирована на 10 минут бесплатно. Поторопитесь!'
+        );
+      }
+      return true;
     } catch (error) {
       console.error('Error creating reservation:', error);
-      Alert.alert('Ошибка', 'Произошла ошибка при создании резервации');
+      const errorMessage = error instanceof Error ? error.message : 'Произошла ошибка при создании резервации';
+      
+      // Check if this is a level validation error
+      if (errorMessage.includes('level') && errorMessage.includes('too low')) {
+        Alert.alert(
+          'Недостаточный уровень',
+          errorMessage,
+          [
+            { text: 'Понятно', style: 'default' }
+          ]
+        );
+      } else {
+        Alert.alert('Ошибка', errorMessage);
+      }
       return false;
     } finally {
       setIsLoading(false);

@@ -37,6 +37,32 @@ class UsersApi {
     });
     return response.data;
   }
+
+  /**
+   * Получаем информацию об уровне пользователя
+   */
+  async getUserLevel(): Promise<{
+    level: number;
+    totalSpent: number;
+    coinsToNextLevel: number;
+    progressToNextLevel: number;
+  }> {
+    try {
+      const token = await SecureStore.getItemAsync('token');
+      const response = await client.get('/users/level', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user level:', error);
+      return {
+        level: 1,
+        totalSpent: 0,
+        coinsToNextLevel: 150,
+        progressToNextLevel: 0,
+      };
+    }
+  }
 }
 
 export const usersApi = new UsersApi(); 

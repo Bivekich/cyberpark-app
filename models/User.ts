@@ -15,6 +15,7 @@ export const UserSchema = z.object({
   status: z.nativeEnum(UserStatus).default(UserStatus.ACTIVE),
   balance: z.number().default(0), // баланс пользователя в монетах
   level: z.number().default(1), // уровень пользователя
+  totalSpent: z.number().default(0), // общая сумма потраченных монет
   experience: z.number().default(0), // опыт пользователя
   telegramId: z.string().optional(), // идентификатор пользователя в Telegram
   appleId: z.string().optional(), // идентификатор пользователя в Apple

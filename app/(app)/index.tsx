@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Car, CarStatus } from '@/models/Car';
 import { balanceService } from '@/services/api/balance';
+import { usersApi } from '@/services/api/users';
 import { carsService } from '@/services/api/cars';
 import { ReservationTimer } from '@/components/ui/ReservationTimer';
 import { LocationSelectionModal } from '@/components/ui/LocationSelectionModal';
@@ -35,6 +36,7 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [showCarSelector, setShowCarSelector] = useState(false);
   const [balance, setBalance] = useState<number>(0);
+  const [userLevel, setUserLevel] = useState<number>(1);
 
   // Debug logging for location
   useEffect(() => {
@@ -48,12 +50,14 @@ export default function HomeScreen() {
   useEffect(() => {
     fetchCarsData();
     fetchBalance();
+    fetchUserLevel();
   }, []);
 
-  // Обновляем баланс каждый раз, когда экран получает фокус
+  // Обновляем баланс и уровень каждый раз, когда экран получает фокус
   useFocusEffect(
     useCallback(() => {
       fetchBalance();
+      fetchUserLevel();
     }, [])
   );
 
@@ -63,6 +67,15 @@ export default function HomeScreen() {
       setBalance(userBalance);
     } catch (error) {
       console.error('Error fetching balance:', error);
+    }
+  };
+
+  const fetchUserLevel = async () => {
+    try {
+      const levelData = await usersApi.getUserLevel();
+      setUserLevel(levelData.level);
+    } catch (error) {
+      console.error('Error fetching user level:', error);
     }
   };
 
@@ -187,13 +200,20 @@ export default function HomeScreen() {
           <View style={styles.header}>
             <View>
               <Text style={styles.welcomeText}>Привет,</Text>
-              <Text style={styles.userName}>{user?.fullName || 'Гонщик'}</Text>
+              <View style={styles.userNameContainer}>
+                <Text style={styles.userName}>{user?.fullName || 'Гонщик'}</Text>
+                <View style={styles.levelBadge}>
+                
+                  <Text style={styles.levelText}>Уровень {userLevel}</Text>
+                </View>
+              </View>
               
               {/* Location display - always show with fallback text */}
               <TouchableOpacity 
                 style={styles.locationContainer}
                 onPress={handleLocationChange}
               >
+              
                 <Ionicons 
                   name="location" 
                   size={16} 
@@ -487,10 +507,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#9F9FAC',
   },
+  userNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   userName: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#FFFFFF',
+  },
+  levelBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderRadius: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+    gap: 4,
+  },
+  levelText: {
+    fontSize: 12,
+    fontWeight: 'normal',
+    color: '#FFD700',
   },
   notificationButton: {
     width: 44,
@@ -513,6 +554,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#FFFFFF',
     marginHorizontal: 8,
+    flex: 1,
   },
   balanceCard: {
     backgroundColor: 'rgba(0, 255, 170, 0.05)',

@@ -26,12 +26,19 @@ export default function ProfileScreen() {
   const { user, signOut, updateUser } = useAuth();
   const { userLocation } = useLocation();
   const [balance, setBalance] = useState<number>(0);
+  const [levelInfo, setLevelInfo] = useState<{
+    level: number;
+    totalSpent: number;
+    coinsToNextLevel: number;
+    progressToNextLevel: number;
+  }>({ level: 1, totalSpent: 0, coinsToNextLevel: 150, progressToNextLevel: 0 });
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(user?.profileImage);
   const [showLocationModal, setShowLocationModal] = useState(false);
 
   useEffect(() => {
     fetchBalance();
+    fetchLevelInfo();
   }, []);
 
   useEffect(() => {
@@ -52,6 +59,16 @@ export default function ProfileScreen() {
       console.error('Profile: Error fetching balance:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchLevelInfo = async () => {
+    try {
+      const levelData = await usersApi.getUserLevel();
+      setLevelInfo(levelData);
+      console.log('Profile: Level info fetched:', levelData);
+    } catch (error) {
+      console.error('Profile: Error fetching level info:', error);
     }
   };
 
@@ -194,7 +211,7 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>2</Text>
+              <Text style={styles.statValue}>{levelInfo.level}</Text>
               <Text style={styles.statLabel}>Уровень</Text>
             </View>
           </View>

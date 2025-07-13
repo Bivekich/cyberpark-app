@@ -19,6 +19,7 @@ import { carsService } from '@/services/api/cars';
 import { useReservation } from '@/contexts/ReservationContext';
 import { ReservationTimer } from '@/components/ui/ReservationTimer';
 import { balanceService } from '@/services/api/balance';
+import { usersApi } from '@/services/api/users';
 
 export default function CarDetailsScreen() {
   const params = useLocalSearchParams();
@@ -29,12 +30,23 @@ export default function CarDetailsScreen() {
   const [car, setCar] = useState<Car | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [locationImages, setLocationImages] = useState<string[]>([]);
+  const [userLevel, setUserLevel] = useState<number>(1);
 
   useEffect(() => {
     if (carId) {
       fetchCarDetails();
+      fetchUserLevel();
     }
   }, [carId]);
+
+  const fetchUserLevel = async () => {
+    try {
+      const levelData = await usersApi.getUserLevel();
+      setUserLevel(levelData.level);
+    } catch (error) {
+      console.error('Error fetching user level:', error);
+    }
+  };
 
   const fetchCarDetails = async () => {
     try {
@@ -118,6 +130,17 @@ export default function CarDetailsScreen() {
     if (!car) return;
 
     try {
+      // Check user level first
+      const hasMinimumLevel = userLevel >= car.minLevel;
+      if (!hasMinimumLevel) {
+        Alert.alert(
+          'Недостаточный уровень',
+          `Для этой машины требуется уровень ${car.minLevel}. Ваш текущий уровень: ${userLevel}. Тратьте монеты, чтобы повысить уровень!`,
+          [{ text: 'Понятно', style: 'default' }]
+        );
+        return;
+      }
+
       // Check if user has sufficient balance (minimum 5 minutes worth)
       const userBalance = await balanceService.getUserBalance();
       const minimumRequired = car.pricePerMinute * 5; // 5 minutes minimum
@@ -152,6 +175,17 @@ export default function CarDetailsScreen() {
     if (!car) return;
 
     try {
+      // Check user level first
+      const hasMinimumLevel = userLevel >= car.minLevel;
+      if (!hasMinimumLevel) {
+        Alert.alert(
+          'Недостаточный уровень',
+          `Для этой машины требуется уровень ${car.minLevel}. Ваш текущий уровень: ${userLevel}. Тратьте монеты, чтобы повысить уровень!`,
+          [{ text: 'Понятно', style: 'default' }]
+        );
+        return;
+      }
+
       // Check if user has sufficient balance (minimum 5 minutes worth for immediate start)
       const userBalance = await balanceService.getUserBalance();
       const minimumRequired = car.pricePerMinute * 5; // 5 minutes minimum for immediate start
@@ -251,35 +285,77 @@ export default function CarDetailsScreen() {
 
             <View style={styles.specsContainer}>
               <Text style={styles.specsTitle}>Характеристики</Text>
-              <View style={styles.specsGrid}>
+              <View style={styles.specsRow}>
                 <View style={styles.specItem}>
                   <Ionicons
                     name="speedometer-outline"
-                    size={20}
+                    size={18}
                     color="#00FFAA"
                   />
-                  <Text style={styles.specLabel}>Макс. скорость</Text>
-                  <Text style={styles.specValue}>{car?.maxSpeed} км/ч</Text>
+                  <View style={styles.specInfo}>
+                    <Text style={styles.specValue}>{car?.maxSpeed} км/ч</Text>
+                    <Text style={styles.specLabel}>Макс. скорость</Text>
+                  </View>
                 </View>
                 <View style={styles.specItem}>
-                  <Ionicons name="flash-outline" size={20} color="#00FFAA" />
-                  <Text style={styles.specLabel}>Заряд</Text>
-                  <Text style={styles.specValue}>{car?.batteryLevel}%</Text>
+                  <Ionicons name="flash-outline" size={18} color="#00FFAA" />
+                  <View style={styles.specInfo}>
+                    <Text style={styles.specValue}>{car?.batteryLevel}%</Text>
+                    <Text style={styles.specLabel}>Заряд</Text>
+                  </View>
+                </View>
+              </View>
+              <View style={styles.specsRow}>
+                <View style={styles.specItem}>
+                  <Ionicons 
+                    name="person-outline" 
+                    size={18} 
+                    color={userLevel >= (car?.minLevel || 1) ? "#00FFAA" : "#FF453A"} 
+                  />
+                  <View style={styles.specInfo}>
+                    <Text style={[
+                      styles.specValue,
+                      { color: userLevel >= (car?.minLevel || 1) ? "#FFFFFF" : "#FF453A" }
+                    ]}>
+                      {car?.minLevel}
+                    </Text>
+                    <Text style={[
+                      styles.specLabel,
+                      { color: userLevel >= (car?.minLevel || 1) ? "#9F9FAC" : "#FF453A" }
+                    ]}>
+                      Мин. уровень
+                    </Text>
+                  </View>
                 </View>
                 <View style={styles.specItem}>
-                  <Ionicons name="person-outline" size={20} color="#00FFAA" />
-                  <Text style={styles.specLabel}>Мин. уровень</Text>
-                  <Text style={styles.specValue}>{car?.minLevel}</Text>
-                </View>
-                <View style={styles.specItem}>
-                  <Ionicons name="card-outline" size={20} color="#00FFAA" />
-                  <Text style={styles.specLabel}>Цена</Text>
-                  <Text style={styles.specValue}>
-                    {car?.pricePerMinute} монет/мин
-                  </Text>
+                  <Ionicons name="card-outline" size={18} color="#00FFAA" />
+                  <View style={styles.specInfo}>
+                    <Text style={styles.specValue}>
+                      {car?.pricePerMinute}
+                    </Text>
+                    <Text style={styles.specLabel}>монет/мин</Text>
+                  </View>
                 </View>
               </View>
             </View>
+
+            {/* Level warning section */}
+            {userLevel < (car?.minLevel || 1) && (
+              <View style={styles.levelWarningSection}>
+                <View style={styles.levelWarningContent}>
+                  <Ionicons name="warning" size={20} color="#FF453A" />
+                  <Text style={styles.levelWarningText}>
+                    Недостаточный уровень для этой машины
+                  </Text>
+                </View>
+                <Text style={styles.levelWarningSubtext}>
+                  Требуется уровень {car?.minLevel}. Ваш уровень: {userLevel}
+                </Text>
+                <Text style={styles.levelWarningAdvice}>
+                  Тратьте монеты, чтобы повысить уровень!
+                </Text>
+              </View>
+            )}
 
             <View style={styles.locationSection}>
               <Text style={styles.locationTitle}>Расположение</Text>
@@ -306,19 +382,45 @@ export default function CarDetailsScreen() {
             {car?.status === CarStatus.AVAILABLE && (
               <>
                 <TouchableOpacity
-                  style={styles.reserveButton}
+                  style={[
+                    styles.reserveButton,
+                    userLevel < (car?.minLevel || 1) && styles.disabledButton
+                  ]}
                   onPress={handleReserveCar}
+                  disabled={userLevel < (car?.minLevel || 1)}
                 >
-                  <Ionicons name="calendar-outline" size={20} color="#00FFAA" />
-                  <Text style={styles.reserveButtonText}>Зарезервировать</Text>
+                  <Ionicons 
+                    name={userLevel < (car?.minLevel || 1) ? "lock-closed-outline" : "calendar-outline"} 
+                    size={20} 
+                    color={userLevel < (car?.minLevel || 1) ? "#9F9FAC" : "#00FFAA"} 
+                  />
+                  <Text style={[
+                    styles.reserveButtonText,
+                    userLevel < (car?.minLevel || 1) && styles.disabledButtonText
+                  ]}>
+                    {userLevel < (car?.minLevel || 1) ? "Заблокировано" : "Зарезервировать"}
+                  </Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity
-                  style={styles.startButton}
+                  style={[
+                    styles.startButton,
+                    userLevel < (car?.minLevel || 1) && styles.disabledStartButton
+                  ]}
                   onPress={handleStartImmediately}
+                  disabled={userLevel < (car?.minLevel || 1)}
                 >
-                  <Ionicons name="play" size={20} color="#121220" />
-                  <Text style={styles.startButtonText}>Начать сейчас</Text>
+                  <Ionicons 
+                    name={userLevel < (car?.minLevel || 1) ? "lock-closed" : "play"} 
+                    size={20} 
+                    color={userLevel < (car?.minLevel || 1) ? "#9F9FAC" : "#121220"} 
+                  />
+                  <Text style={[
+                    styles.startButtonText,
+                    userLevel < (car?.minLevel || 1) && styles.disabledButtonText
+                  ]}>
+                    {userLevel < (car?.minLevel || 1) ? "Заблокировано" : "Начать сейчас"}
+                  </Text>
                 </TouchableOpacity>
               </>
             )}
@@ -418,7 +520,7 @@ const styles = StyleSheet.create({
   specsContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 16,
-    padding: 20,
+    padding: 16,
     marginBottom: 24,
   },
   specsTitle: {
@@ -427,26 +529,57 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginBottom: 16,
   },
-  specsGrid: {
+  specsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -8,
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
   specItem: {
-    width: '50%',
-    paddingHorizontal: 8,
-    marginBottom: 16,
-    alignItems: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginHorizontal: 4,
+  },
+  specInfo: {
+    marginLeft: 8,
   },
   specLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#9F9FAC',
-    marginTop: 4,
   },
   specValue: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#FFFFFF',
+  },
+  levelWarningSection: {
+    backgroundColor: 'rgba(255, 69, 58, 0.1)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 69, 58, 0.3)',
+  },
+  levelWarningContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  levelWarningText: {
+    fontSize: 16,
+    color: '#FF453A',
+    fontWeight: '600',
+    marginLeft: 12,
+  },
+  levelWarningSubtext: {
+    fontSize: 14,
+    color: '#FF9500',
+    marginBottom: 4,
+  },
+  levelWarningAdvice: {
+    fontSize: 13,
+    color: '#FFD700',
+    fontStyle: 'italic',
   },
   locationSection: {
     marginBottom: 24,
@@ -458,18 +591,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   locationImagesContainer: {
-    paddingRight: 16,
+    paddingRight: 20,
   },
   locationImage: {
-    width: 280,
-    height: 180,
-    borderRadius: 16,
+    width: 200,
+    height: 120,
+    borderRadius: 12,
     marginRight: 12,
   },
   mapPlaceholder: {
-    height: 180,
+    height: 200,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -477,60 +610,62 @@ const styles = StyleSheet.create({
     color: '#9F9FAC',
     marginTop: 8,
   },
-  rentButton: {
-    backgroundColor: '#00FFAA',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginBottom: 12, // Adjusted margin for spacing between buttons
-  },
-  rentButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#121220',
-  },
   reserveButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 255, 170, 0.1)',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
     paddingVertical: 16,
-    paddingHorizontal: 20,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 255, 170, 0.3)',
   },
   reserveButtonText: {
+    color: '#00FFAA',
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#00FFAA',
-    marginLeft: 10,
+    marginLeft: 8,
   },
   startButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#00FFAA',
     borderRadius: 12,
     paddingVertical: 16,
-    paddingHorizontal: 20,
-    marginBottom: 12,
   },
   startButtonText: {
+    color: '#121220',
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#121220',
-    marginLeft: 10,
+    marginLeft: 8,
+  },
+  disabledButton: {
+    backgroundColor: 'rgba(159, 159, 172, 0.2)',
+    borderColor: 'rgba(159, 159, 172, 0.3)',
+  },
+  disabledStartButton: {
+    backgroundColor: 'rgba(159, 159, 172, 0.2)',
+  },
+  disabledButtonText: {
+    color: '#9F9FAC',
   },
   unavailableMessage: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'rgba(255, 149, 0, 0.1)',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 149, 0, 0.3)',
   },
   unavailableText: {
-    flex: 1,
+    color: '#FF9500',
+    fontSize: 16,
+    fontWeight: '600',
     marginLeft: 12,
-    color: '#FFFFFF',
-    fontSize: 14,
   },
 });

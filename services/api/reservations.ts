@@ -52,14 +52,16 @@ class ReservationService {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create reservation');
+        const errorData = await response.json();
+        const errorMessage = errorData.message || 'Failed to create reservation';
+        throw new Error(errorMessage);
       }
 
       const backendData: BackendReservation = await response.json();
       return this.transformBackendReservation(backendData);
     } catch (error) {
       console.error('Error creating reservation:', error);
-      return null;
+      throw error; // Re-throw to allow caller to handle specific errors
     }
   }
 
